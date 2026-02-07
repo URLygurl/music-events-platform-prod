@@ -9,19 +9,20 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - **Database**: PostgreSQL with Drizzle ORM
 - **Auth**: Replit Auth (OpenID Connect SSO)
 - **Routing**: wouter (client-side)
-- **File Uploads**: multer (image-only, saved to /client/public/uploads)
+- **File Uploads**: multer (images saved to /client/public/uploads, fonts saved to /client/public/uploads)
 
 ## Key Pages
-1. **Login** — SSO login page with provider button (reads welcome text, subtitle, header image from settings)
-2. **Landing** — Event name, search, 2x2 artist tile grid, media player, enquiry form, banner (reads heading, search placeholder, banner image, enquiry title from settings)
-3. **Artist Detail** — Hero image, description, contact info, promoter image
-4. **Artists Directory** — List view with search/filter (reads page title from settings)
-5. **Events** — Card-based event listing (reads page title from settings)
-6. **DS** — Customizable content page (reads title, content text, image from settings)
-7. **Profile** — User profile with logout
-8. **Admin** — Dashboard with 10 walkthrough sections for customizing all content + Integrations button
-9. **Integrations** (/admin/integrations) — Toggle cards for Google Drive, Sheets, Docs, Gmail, YouTube, YouTube Music, Bandcamp, DistroKid, AI Assistant (BYOK), Stripe (dormant), Donations
-10. **Donate** (/donate) — Donation form with configurable amounts, title, description
+1. **Login** — SSO login page with provider button (reads welcome text, subtitle, header image, wallpaper from settings)
+2. **Landing** — Event name, search, 2x2 artist tile grid, media player, animation boxes, enquiry form, social links, share button, banner (reads heading, search placeholder, banner image, enquiry title, wallpaper from settings)
+3. **Artist Detail** — Hero image, description, contact info, promoter image, share button
+4. **Artists Directory** — List view with search/filter (reads page title, wallpaper from settings)
+5. **Events** — Card-based event listing (reads page title, wallpaper from settings)
+6. **Event Detail** — Full event info with Google Maps, times, ticket link, share button
+7. **DS** — Customizable content page (reads title, content text, image, wallpaper from settings)
+8. **Profile** — User profile with logout
+9. **Admin** — Dashboard with 13 walkthrough sections for customizing all content + Integrations button
+10. **Integrations** (/admin/integrations) — Toggle cards for Google Drive, Sheets, Docs, Gmail, YouTube, YouTube Music, Bandcamp, DistroKid, AI Assistant (BYOK), Stripe (dormant), Donations
+11. **Donate** (/donate) — Donation form with configurable amounts, title, description
 
 ## Navigation
 - Bottom nav bar with 5 buttons: Home, Artists, Events, DS, Profile (labels from settings)
@@ -29,10 +30,10 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Hamburger menu opens a sheet with nav links + Donate + Admin + Integrations + user info + logout
 
 ## Data Models
-- **artists**: id, name, genre, description, imageUrl, email, phone, socialLinks, timeSlot, featured, promoterImageUrl
-- **events**: id, name, description, imageUrl, date, venue
+- **artists**: id, name, genre, description, imageUrl, email, phone, socialLinks, timeSlot, featured, promoterImageUrl, origin, members, bio, website, imageUrl2, songLink1/2, videoLink1/2, customLink1-5, visibleFields
+- **events**: id, name, description, imageUrl, date, venue, time, endDate, endTime, address, googleMapsUrl, ticketUrl, visibleFields
 - **enquiries**: id, name, email, message, createdAt
-- **site_settings**: id, key (unique), value, type (text/image/color/font), section, label
+- **site_settings**: id, key (unique), value, type (text/image/color/font/toggle), section, label
 - **media_items**: id, title, url, type (youtube/bandcamp/soundcloud/audio), embedUrl, order
 - **donations**: id, name, email, amount, message, status, createdAt
 - **users**: Managed by Replit Auth (id, email, firstName, lastName, profileImageUrl)
@@ -54,6 +55,7 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - `GET /api/settings` — List all settings
 - `PUT /api/settings` — Upsert settings array
 - `POST /api/upload` — Upload image file (returns URL)
+- `POST /api/upload/font` — Upload font file (.ttf, .otf, .woff, .woff2) (returns URL + filename)
 - `GET /api/media` — List media items
 - `POST /api/media` — Create media item (URL validated against allow-list)
 - `PATCH /api/media/:id` — Update media item
@@ -66,13 +68,29 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - `GET /api/logout` — Logout
 
 ## Admin Dashboard
-- 10 sections: Global Branding, Style Guide, Login Page, Landing Page, Manage Artists, Manage Events, Artists Directory, Events Page, DS Page, Navigation
+- 13 sections: Global Branding, Style Guide, Wallpapers, Social Media, Animations, Login Page, Landing Page, Manage Artists, Manage Events, Artists Directory, Events Page, DS Page, Navigation
 - Tab-based navigation between sections + Previous/Next buttons
 - Settings sections: text inputs, color pickers, font selectors, image uploads, toggle switches
+- Style Guide includes Custom Font Upload card (upload .ttf/.otf/.woff/.woff2, auto-sets font name)
+- Wallpapers section: upload background images for each page (landing, artists, events, DS, login)
+- Social Media section: URLs for Instagram, Facebook, X, TikTok, YouTube, SoundCloud, Spotify, Bandcamp, website, email
+- Animations section: 3 configurable animation boxes with text, style selector (fade-in/slide-up/slide-left/slide-right/zoom-in/bounce/pulse), and background image
 - Artists section: inline editing with add/save/delete + CSV import/export card
 - Events section: full inline editing with add/save/delete
 - Navigation section: button labels + menu item visibility toggles (menu_show_*)
 - Changes saved per section, reflected immediately on public pages
+
+## Components
+- **AppLayout** — Main layout wrapper with top ribbon, bottom nav, and optional wallpaper background via `bgKey` prop
+- **CustomFontLoader** — Injected in App.tsx, dynamically loads custom font via @font-face from settings
+- **ShareButton** — Dropdown with copy link, Facebook, X, WhatsApp, LinkedIn, native share API
+- **SocialLinks** — Displays platform social media icons filtered by non-empty setting values
+- **AnimationBox/AnimationBoxes** — Scroll-triggered animation containers with IntersectionObserver, 7 animation styles
+- **MediaPlayer** — Embeds YouTube/Bandcamp/SoundCloud/Spotify media
+- **EnquiryForm** — Contact form with Google Sheets integration
+- **ArtistTile** — Artist card for grid display
+- **SearchBar** — Search input component
+- **ImagePlaceholder** — Dashed border placeholder for empty image areas
 
 ## Settings Hook
 - `useSettings()` hook in `client/src/hooks/use-settings.ts`
@@ -108,3 +126,11 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Google Sheets integration: enquiry/donation submissions append to user-configured sheets, settings in integrations admin: Feb 7, 2026
 - CSV export/import updated to handle all new artist fields with flexible column matching: Feb 7, 2026
 - Members field uses comma-separated string, rendered as Badge tags with add/remove controls: Feb 7, 2026
+- Added wallpaper backgrounds for all pages (landing, artists, events, DS, login) with overlay: Feb 7, 2026
+- Added custom font upload endpoint and CustomFontLoader component for dynamic @font-face injection: Feb 7, 2026
+- Added ShareButton component (copy link, Facebook, X, WhatsApp, LinkedIn, native share): Feb 7, 2026
+- Added SocialLinks component displaying platform social media icons from settings: Feb 7, 2026
+- Added AnimationBox component with 7 scroll-triggered animation styles: Feb 7, 2026
+- Added 3 new admin sections: Wallpapers, Social Media, Animations: Feb 7, 2026
+- Added Font Upload card in Style Guide admin section: Feb 7, 2026
+- Integrated social links + share button on landing page, share button on artist/event detail pages: Feb 7, 2026

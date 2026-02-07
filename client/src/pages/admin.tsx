@@ -41,6 +41,10 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Image,
+  Share2,
+  Sparkles,
+  Type,
 } from "lucide-react";
 import { Link } from "wouter";
 import type { SiteSetting, Artist, Event } from "@shared/schema";
@@ -56,6 +60,9 @@ const FONT_OPTIONS = [
 const SECTIONS = [
   { id: "global", label: "Global Branding", icon: Settings },
   { id: "style", label: "Style Guide", icon: Palette },
+  { id: "wallpapers", label: "Wallpapers", icon: Image },
+  { id: "social", label: "Social Media", icon: Share2 },
+  { id: "animations", label: "Animations", icon: Sparkles },
   { id: "login", label: "Login Page", icon: LogIn },
   { id: "landing", label: "Landing Page", icon: Home },
   { id: "artists", label: "Manage Artists", icon: Music },
@@ -532,6 +539,76 @@ function EventEditor({
   );
 }
 
+function FontUploadSection({
+  localValues,
+  setLocal,
+}: {
+  localValues: Record<string, string>;
+  setLocal: (key: string, val: string) => void;
+}) {
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+  const fontUrl = localValues["custom_font_url"] || "";
+  const fontName = localValues["custom_font_name"] || "";
+
+  const handleFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload/font", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setLocal("custom_font_url", data.url);
+      const name = file.name.replace(/\.(ttf|otf|woff2?)/i, "");
+      if (!fontName) setLocal("custom_font_name", name);
+      toast({ title: "Font uploaded", description: `${file.name} ready to use.` });
+    } catch {
+      toast({ title: "Error", description: "Font upload failed.", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Card className="p-4 mt-4 space-y-3 overflow-visible">
+      <div className="flex items-center gap-2 mb-1">
+        <Type className="w-4 h-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">Custom Font Upload</h3>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Upload a .ttf, .otf, .woff, or .woff2 font file. Set a name above, then upload here.
+      </p>
+      {fontUrl ? (
+        <div className="flex items-center gap-2 text-sm">
+          <Check className="w-4 h-4 text-muted-foreground" />
+          <span className="truncate flex-1 text-xs">{fontUrl}</span>
+          <Button size="icon" variant="ghost" onClick={() => { setLocal("custom_font_url", ""); setLocal("custom_font_name", ""); }}>
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+      ) : (
+        <label className="flex flex-col items-center justify-center h-20 border border-dashed rounded-md cursor-pointer hover-elevate">
+          <Upload className="w-5 h-5 text-muted-foreground mb-1" />
+          <span className="text-xs text-muted-foreground">
+            {uploading ? "Uploading..." : "Click to upload font file"}
+          </span>
+          <input
+            type="file"
+            accept=".ttf,.otf,.woff,.woff2"
+            className="hidden"
+            onChange={handleFontUpload}
+            disabled={uploading}
+            data-testid="input-upload-font"
+          />
+        </label>
+      )}
+    </Card>
+  );
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const [step, setStep] = useState(0);
@@ -824,6 +901,14 @@ export default function AdminPage() {
                 localValues={localValues}
                 setLocal={setLocal}
               />
+              {currentSection.id === "style" && (
+                <FontUploadSection localValues={localValues} setLocal={setLocal} />
+              )}
+              {currentSection.id === "animations" && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Styles: fade-in, slide-up, slide-left, slide-right, zoom-in, bounce, pulse
+                </p>
+              )}
               {sectionSettings.length > 0 && (
                 <div className="pt-4">
                   <Button

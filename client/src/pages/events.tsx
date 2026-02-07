@@ -19,7 +19,7 @@ export default function EventsPage() {
   const pageTitle = get("events_page_title", "Events");
 
   return (
-    <AppLayout>
+    <AppLayout bgKey="bg_events">
       <div className="px-4 py-4">
         <h2 className="text-lg font-semibold mb-4" data-testid="text-events-title">{pageTitle}</h2>
 

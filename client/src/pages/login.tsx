@@ -11,9 +11,19 @@ export default function LoginPage() {
   const welcomeText = get("login_welcome_text", "Welcome");
   const subtitle = get("login_subtitle", "Sign in to access the platform");
   const headerImage = get("login_header_image");
+  const bgImage = get("bg_login");
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div
+      className="min-h-screen flex flex-col bg-background"
+      style={bgImage ? {
+        backgroundImage: `url(${bgImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      } : undefined}
+    >
+      {bgImage && <div className="fixed inset-0 bg-background/80 z-0" />}
+      <div className={`flex flex-col min-h-screen ${bgImage ? "relative z-10" : ""}`}>
       <div className="w-full border-b px-4 py-2">
         <p className="text-center text-xs tracking-widest uppercase text-muted-foreground">
           {companyName}
@@ -53,6 +63,7 @@ export default function LoginPage() {
       </div>
 
       <BottomNav />
+      </div>
     </div>
   );
 }

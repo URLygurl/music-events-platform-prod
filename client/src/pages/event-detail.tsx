@@ -5,6 +5,7 @@ import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CalendarDays, Clock, MapPin, Ticket, Globe } from "lucide-react";
+import { ShareButton } from "@/components/share-button";
 import type { Event } from "@shared/schema";
 import { getVisibleFields, DEFAULT_EVENT_VISIBILITY } from "@shared/schema";
 
@@ -58,6 +59,7 @@ export default function EventDetailPage() {
           </Button>
         </Link>
         <h1 className="text-sm font-medium flex-1 truncate">{event.name || "Event"}</h1>
+        <ShareButton title={event.name} />
       </div>
 
       {vis.imageUrl !== false && (

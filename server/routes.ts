@@ -15,6 +15,7 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
+const FONT_MIMES = ["font/ttf", "font/otf", "font/woff", "font/woff2", "application/font-woff", "application/font-woff2", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream"];
 
 const ALLOWED_EMBED_HOSTS = [
   "youtube.com", "www.youtube.com", "youtu.be",
@@ -360,6 +361,37 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error uploading file:", error);
       res.status(500).json({ message: "Failed to upload file" });
+    }
+  });
+
+  const fontUpload = multer({
+    storage: multer.diskStorage({
+      destination: uploadsDir,
+      filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        const name = `font-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+        cb(null, name);
+      },
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      if ([".ttf", ".otf", ".woff", ".woff2"].includes(ext) || FONT_MIMES.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only font files (.ttf, .otf, .woff, .woff2) are allowed"));
+      }
+    },
+  });
+
+  app.post("/api/upload/font", fontUpload.single("file"), (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const url = `/uploads/${req.file.filename}`;
+      res.json({ url, filename: req.file.originalname });
+    } catch (error) {
+      console.error("Error uploading font:", error);
+      res.status(500).json({ message: "Failed to upload font" });
     }
   });
 

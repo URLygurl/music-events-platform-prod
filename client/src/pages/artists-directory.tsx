@@ -27,7 +27,7 @@ export default function ArtistsDirectoryPage() {
     : artists;
 
   return (
-    <AppLayout>
+    <AppLayout bgKey="bg_artists">
       <div className="px-4 py-4">
         <h2 className="text-lg font-semibold mb-3" data-testid="text-artists-title">{pageTitle}</h2>
         <SearchBar value={search} onChange={setSearch} placeholder="Search artists..." />

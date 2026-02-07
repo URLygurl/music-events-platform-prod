@@ -7,6 +7,9 @@ import { EnquiryForm } from "@/components/enquiry-form";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MediaPlayer } from "@/components/media-player";
+import { SocialLinks } from "@/components/social-links";
+import { AnimationBoxes } from "@/components/animation-box";
+import { ShareButton } from "@/components/share-button";
 import { useSettings } from "@/hooks/use-settings";
 import type { Artist, Event } from "@shared/schema";
 
@@ -31,7 +34,7 @@ export default function LandingPage() {
   const enquiryTitle = get("landing_enquiry_title", "Enquire / Subscribe");
 
   return (
-    <AppLayout>
+    <AppLayout bgKey="bg_landing">
       <div className="border-b px-4 py-3">
         <p className="text-xs uppercase tracking-wider text-muted-foreground text-center" data-testid="text-heading-banner">
           {headingText}
@@ -77,8 +80,17 @@ export default function LandingPage() {
         <MediaPlayer />
       </div>
 
+      <div className="px-4 pb-6">
+        <AnimationBoxes />
+      </div>
+
       <div className="px-4 pb-8">
         <EnquiryForm title={enquiryTitle} />
+      </div>
+
+      <div className="px-4 pb-6 flex items-center justify-between gap-2 flex-wrap">
+        <SocialLinks />
+        <ShareButton title={currentEvent?.name || "Check this out"} size="sm" variant="outline" />
       </div>
 
       {bannerImage ? (

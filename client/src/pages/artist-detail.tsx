@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Mail, Phone, Globe, Music, Video, LinkIcon } from "lucide-react";
+import { ShareButton } from "@/components/share-button";
 import { useState } from "react";
 import type { Artist } from "@shared/schema";
 import { getVisibleFields, DEFAULT_ARTIST_VISIBILITY } from "@shared/schema";
@@ -76,6 +77,7 @@ export default function ArtistDetailPage() {
         <div className="flex-1">
           <SearchBar value={search} onChange={setSearch} placeholder="Search..." />
         </div>
+        <ShareButton title={artist.name} />
       </div>
 
       {vis.imageUrl !== false && (

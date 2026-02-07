@@ -10,7 +10,7 @@ export default function DSPage() {
   const image = get("ds_content_image");
 
   return (
-    <AppLayout>
+    <AppLayout bgKey="bg_ds">
       <div className="px-4 py-4">
         <h2 className="text-lg font-semibold mb-4" data-testid="text-ds-title">{title}</h2>
         <div className="space-y-4">
