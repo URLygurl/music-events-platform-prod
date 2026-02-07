@@ -18,7 +18,7 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 4. **Artists Directory** — List view with search/filter (reads page title, wallpaper from settings)
 5. **Events** — Card-based event listing (reads page title, wallpaper from settings)
 6. **Event Detail** — Full event info with Google Maps, times, ticket link, share button
-7. **DS** — Customizable content page (reads title, content text, image, wallpaper from settings)
+7. **DS** — Client profile section with rich fields (images, bio, origin, members, links, visibility controls) + page settings (title, content text, image, wallpaper)
 8. **Profile** — User profile with logout
 9. **Admin** — Dashboard with 13 walkthrough sections for customizing all content + Integrations button
 10. **Integrations** (/admin/integrations) — Toggle cards for Google Drive, Sheets, Docs, Gmail, YouTube, YouTube Music, Bandcamp, DistroKid, AI Assistant (BYOK), Stripe (dormant), Donations
@@ -36,6 +36,7 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - **site_settings**: id, key (unique), value, type (text/image/color/font/toggle), section, label
 - **media_items**: id, title, url, type (youtube/bandcamp/soundcloud/audio), embedUrl, order
 - **donations**: id, name, email, amount, message, status, createdAt
+- **ds_clients**: id, name, genre, description, imageUrl, email, phone, socialLinks, timeSlot, promoterImageUrl, origin, members, bio, website, imageUrl2, songLink1/2, videoLink1/2, customLink1-5, visibleFields (mirrors artist schema)
 - **users**: Managed by Replit Auth (id, email, firstName, lastName, profileImageUrl)
 
 ## API Routes
@@ -62,6 +63,11 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - `DELETE /api/media/:id` — Delete media item
 - `POST /api/donations` — Submit donation
 - `GET /api/donations` — List donations
+- `GET /api/ds-clients` — List all DS client profiles
+- `GET /api/ds-clients/:id` — Single DS client
+- `POST /api/ds-clients` — Create DS client
+- `PATCH /api/ds-clients/:id` — Update DS client
+- `DELETE /api/ds-clients/:id` — Delete DS client
 - `POST /api/ai/chat` — AI chat proxy (OpenAI/Anthropic, BYOK)
 - `GET /api/auth/user` — Current authenticated user
 - `GET /api/login` — Begin SSO login
@@ -134,3 +140,4 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Added 3 new admin sections: Wallpapers, Social Media, Animations: Feb 7, 2026
 - Added Font Upload card in Style Guide admin section: Feb 7, 2026
 - Integrated social links + share button on landing page, share button on artist/event detail pages: Feb 7, 2026
+- Added ds_clients table with full artist-equivalent fields, CRUD API routes, admin editor with visibility toggles, and public DS page client profiles: Feb 7, 2026

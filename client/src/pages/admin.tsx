@@ -47,8 +47,8 @@ import {
   Type,
 } from "lucide-react";
 import { Link } from "wouter";
-import type { SiteSetting, Artist, Event } from "@shared/schema";
-import { ARTIST_FIELD_LABELS, EVENT_FIELD_LABELS, DEFAULT_ARTIST_VISIBILITY, DEFAULT_EVENT_VISIBILITY, getVisibleFields } from "@shared/schema";
+import type { SiteSetting, Artist, Event, DsClient } from "@shared/schema";
+import { ARTIST_FIELD_LABELS, EVENT_FIELD_LABELS, DS_CLIENT_FIELD_LABELS, DEFAULT_ARTIST_VISIBILITY, DEFAULT_EVENT_VISIBILITY, DEFAULT_DS_CLIENT_VISIBILITY, getVisibleFields } from "@shared/schema";
 
 const FONT_OPTIONS = [
   "Inter", "Roboto", "Open Sans", "Montserrat", "Poppins",
@@ -539,6 +539,132 @@ function EventEditor({
   );
 }
 
+function DsClientEditor({
+  client,
+  onSave,
+  onDelete,
+  saving,
+}: {
+  client: DsClient;
+  onSave: (id: number, data: Partial<DsClient>) => void;
+  onDelete: (id: number) => void;
+  saving: boolean;
+}) {
+  const [local, setLocal] = useState<Partial<DsClient>>({});
+  const merged = { ...client, ...local };
+  const vis = getVisibleFields(merged.visibleFields as string, DEFAULT_DS_CLIENT_VISIBILITY);
+
+  const set = (field: string, value: string | boolean | null) => {
+    setLocal((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const setVis = (fieldKey: string, val: boolean) => {
+    const newVis = { ...vis, [fieldKey]: val };
+    set("visibleFields", JSON.stringify(newVis));
+  };
+
+  const imageFields: Array<{ key: keyof DsClient; label: string }> = [
+    { key: "imageUrl", label: "Image 1" },
+    { key: "imageUrl2", label: "Image 2" },
+  ];
+
+  const textFields: Array<{ key: keyof DsClient; label: string; multiline?: boolean }> = [
+    { key: "name", label: "Name" },
+    { key: "origin", label: "Origin" },
+    { key: "bio", label: "Bio", multiline: true },
+    { key: "genre", label: "Genre" },
+    { key: "description", label: "Description", multiline: true },
+    { key: "timeSlot", label: "Time Slot" },
+    { key: "website", label: "Website" },
+    { key: "phone", label: "Phone" },
+    { key: "email", label: "Email" },
+    { key: "socialLinks", label: "Social Links" },
+    { key: "songLink1", label: "Song Link 1" },
+    { key: "songLink2", label: "Song Link 2" },
+    { key: "videoLink1", label: "Video Link 1" },
+    { key: "videoLink2", label: "Video Link 2" },
+    { key: "customLink1", label: "Custom Link 1" },
+    { key: "customLink2", label: "Custom Link 2" },
+    { key: "customLink3", label: "Custom Link 3" },
+    { key: "customLink4", label: "Custom Link 4" },
+    { key: "customLink5", label: "Custom Link 5" },
+  ];
+
+  return (
+    <Card className="p-4 space-y-3 overflow-visible">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <h4 className="font-medium text-sm">{merged.name || "New Client Profile"}</h4>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            onClick={() => { onSave(client.id, local); setLocal({}); }}
+            disabled={saving || Object.keys(local).length === 0}
+            data-testid={`button-save-ds-client-${client.id}`}
+          >
+            <Check className="w-3 h-3 mr-1" /> Save
+          </Button>
+          <Button size="icon" variant="ghost" onClick={() => onDelete(client.id)} data-testid={`button-delete-ds-client-${client.id}`}>
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        {imageFields.map((f) => (
+          <FieldWithToggle key={f.key} fieldKey={f.key} visible={vis[f.key] !== false} onToggleVisible={setVis}>
+            <ImageUploadField
+              label={f.label}
+              value={(merged[f.key] as string) || ""}
+              onChange={(v) => set(f.key, v)}
+            />
+          </FieldWithToggle>
+        ))}
+
+        <FieldWithToggle fieldKey="members" visible={vis.members !== false} onToggleVisible={setVis}>
+          <div className="space-y-1">
+            <Label className="text-xs">Members</Label>
+            <MembersTagInput
+              value={(merged.members as string) || ""}
+              onChange={(v) => set("members", v)}
+            />
+          </div>
+        </FieldWithToggle>
+
+        {textFields.map((f) => (
+          <FieldWithToggle key={f.key} fieldKey={f.key} visible={vis[f.key] !== false} onToggleVisible={setVis}>
+            <div className="space-y-1">
+              <Label className="text-xs">{f.label}</Label>
+              {f.multiline ? (
+                <Textarea
+                  value={(merged[f.key] as string) || ""}
+                  onChange={(e) => set(f.key, e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                  data-testid={`input-ds-client-${f.key}-${client.id}`}
+                />
+              ) : (
+                <Input
+                  value={(merged[f.key] as string) || ""}
+                  onChange={(e) => set(f.key, e.target.value)}
+                  data-testid={`input-ds-client-${f.key}-${client.id}`}
+                />
+              )}
+            </div>
+          </FieldWithToggle>
+        ))}
+
+        <FieldWithToggle fieldKey="promoterImageUrl" visible={vis.promoterImageUrl !== false} onToggleVisible={setVis}>
+          <ImageUploadField
+            label="Promoter Image"
+            value={(merged.promoterImageUrl as string) || ""}
+            onChange={(v) => set("promoterImageUrl", v)}
+          />
+        </FieldWithToggle>
+      </div>
+    </Card>
+  );
+}
+
 function FontUploadSection({
   localValues,
   setLocal,
@@ -626,6 +752,10 @@ export default function AdminPage() {
     queryKey: ["/api/events"],
   });
 
+  const { data: dsClientsList, isLoading: loadingDsClients } = useQuery<DsClient[]>({
+    queryKey: ["/api/ds-clients"],
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (settings: { key: string; value: string; type: string; section: string; label: string }[]) => {
       await apiRequest("PUT", "/api/settings", { settings });
@@ -706,6 +836,39 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({ title: "Added", description: "Empty event block created." });
+    },
+  });
+
+  const dsClientMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<DsClient> }) => {
+      await apiRequest("PATCH", `/api/ds-clients/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ds-clients"] });
+      toast({ title: "Saved", description: "Client profile updated." });
+    },
+  });
+
+  const deleteDsClientMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/ds-clients/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ds-clients"] });
+      toast({ title: "Deleted", description: "Client profile removed." });
+    },
+  });
+
+  const addDsClientMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/ds-clients", {
+        name: "",
+        visibleFields: JSON.stringify(DEFAULT_DS_CLIENT_VISIBILITY),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ds-clients"] });
+      toast({ title: "Added", description: "Empty client profile created." });
     },
   });
 
@@ -892,6 +1055,56 @@ export default function AdminPage() {
                 data-testid="button-add-event"
               >
                 <Plus className="w-4 h-4 mr-2" /> Add Event
+              </Button>
+            </div>
+          ) : currentSection.id === "ds" ? (
+            <div className="space-y-4">
+              <SettingsSection
+                settings={sectionSettings}
+                localValues={localValues}
+                setLocal={setLocal}
+              />
+              {sectionSettings.length > 0 && (
+                <div className="pt-2">
+                  <Button
+                    onClick={handleSaveSettings}
+                    disabled={saveMutation.isPending || !hasChanges}
+                    className="w-full"
+                    data-testid="button-save-ds-settings"
+                  >
+                    {saveMutation.isPending ? "Saving..." : "Save Page Settings"}
+                  </Button>
+                </div>
+              )}
+
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-semibold mb-2">Client Profiles</h3>
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mb-3">
+                  <Eye className="w-3 h-3" /> Use the eye icon on each field to control visibility on the public page
+                </p>
+              </div>
+
+              {loadingDsClients ? (
+                <Skeleton className="h-40 w-full" />
+              ) : (
+                dsClientsList?.map((client) => (
+                  <DsClientEditor
+                    key={client.id}
+                    client={client}
+                    onSave={(id, data) => dsClientMutation.mutate({ id, data })}
+                    onDelete={(id) => deleteDsClientMutation.mutate(id)}
+                    saving={dsClientMutation.isPending}
+                  />
+                ))
+              )}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => addDsClientMutation.mutate()}
+                disabled={addDsClientMutation.isPending}
+                data-testid="button-add-ds-client"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Add Client Profile
               </Button>
             </div>
           ) : (
