@@ -11,6 +11,7 @@ import ArtistsDirectoryPage from "@/pages/artists-directory";
 import EventsPage from "@/pages/events";
 import DSPage from "@/pages/ds";
 import ProfilePage from "@/pages/profile";
+import AdminPage from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
+      <Route path="/admin" component={AdminPage} />
       <Route path="/artists/:id" component={ArtistDetailPage} />
       <Route path="/artists" component={ArtistsDirectoryPage} />
       <Route path="/events" component={EventsPage} />

@@ -1,128 +1,57 @@
 import { db } from "./db";
-import { artists, events } from "@shared/schema";
+import { artists, events, siteSettings } from "@shared/schema";
 import { sql } from "drizzle-orm";
 
 export async function seedDatabase() {
-  const [existing] = await db.select({ count: sql<number>`count(*)` }).from(artists);
-  if (existing && Number(existing.count) > 0) return;
+  const [existingArtists] = await db.select({ count: sql<number>`count(*)` }).from(artists);
+  if (!existingArtists || Number(existingArtists.count) === 0) {
+    console.log("Seeding artists & events...");
+    await db.insert(artists).values([
+      { name: "DJ Momentum", genre: "House / Deep House", description: "DJ Momentum brings pulsating deep house rhythms that move the crowd from the first beat. Known for seamless transitions and an instinct for the dancefloor, Momentum has played at festivals across the country.", imageUrl: "", email: "momentum@example.com", phone: "+1 555-0101", socialLinks: "https://instagram.com/djmomentum", timeSlot: "22:00 - 00:00", featured: true, promoterImageUrl: "" },
+      { name: "Vox Luna", genre: "Indie Pop / Electronic", description: "Vox Luna blends ethereal vocals with electronic beats to create a dreamy sonic landscape. Her live performances weave looping and layering into a captivating one-woman show.", imageUrl: "", email: "voxluna@example.com", phone: "+1 555-0102", socialLinks: "https://instagram.com/voxluna", timeSlot: "20:00 - 21:30", featured: true, promoterImageUrl: "" },
+      { name: "The Brass Assembly", genre: "Jazz / Funk", description: "A seven-piece brass ensemble that fuses classic jazz with modern funk grooves. The Brass Assembly brings high energy and tight arrangements to every performance.", imageUrl: "", email: "brass@example.com", phone: "+1 555-0103", socialLinks: "https://instagram.com/brassassembly", timeSlot: "18:00 - 19:30", featured: true, promoterImageUrl: "" },
+      { name: "Neon Pulse", genre: "Synthwave / Retro", description: "Neon Pulse takes audiences on a journey through retro-futuristic soundscapes. Combining analogue synths with modern production, each set feels like a soundtrack to a film that hasn't been made yet.", imageUrl: "", email: "neonpulse@example.com", phone: "+1 555-0104", socialLinks: "https://instagram.com/neonpulse", timeSlot: "00:00 - 02:00", featured: true, promoterImageUrl: "" },
+      { name: "Roots Collective", genre: "Reggae / Dub", description: "Roots Collective brings authentic reggae and dub vibrations with live instrumentation.", imageUrl: "", email: "roots@example.com", phone: "+1 555-0105", socialLinks: "https://instagram.com/rootscollective", timeSlot: "16:00 - 17:30", featured: false, promoterImageUrl: "" },
+      { name: "MC Frequency", genre: "Hip Hop / Spoken Word", description: "MC Frequency delivers sharp lyricism and powerful spoken word over original beats.", imageUrl: "", email: "frequency@example.com", phone: "+1 555-0106", socialLinks: "https://instagram.com/mcfrequency", timeSlot: "19:30 - 20:00", featured: false, promoterImageUrl: "" },
+      { name: "Aurora Keys", genre: "Classical Crossover", description: "Aurora Keys reimagines classical piano pieces with electronic arrangements.", imageUrl: "", email: "aurora@example.com", phone: "+1 555-0107", socialLinks: "https://instagram.com/aurorakeys", timeSlot: "15:00 - 16:00", featured: false, promoterImageUrl: "" },
+      { name: "Bass Theory", genre: "Drum & Bass / Jungle", description: "Bass Theory delivers relentless drum and bass sets that push the boundaries of tempo and texture.", imageUrl: "", email: "basstheory@example.com", phone: "+1 555-0108", socialLinks: "https://instagram.com/basstheory", timeSlot: "02:00 - 04:00", featured: false, promoterImageUrl: "" },
+    ]);
+    await db.insert(events).values([
+      { name: "Summer Sound Festival 2026", description: "A full day of live music across three stages.", imageUrl: "", date: "July 15, 2026", venue: "Riverside Park Amphitheatre" },
+      { name: "Midnight Sessions", description: "An intimate late-night electronic music showcase.", imageUrl: "", date: "August 22, 2026", venue: "The Warehouse, Downtown" },
+    ]);
+  }
 
-  console.log("Seeding database...");
-
-  await db.insert(artists).values([
-    {
-      name: "DJ Momentum",
-      genre: "House / Deep House",
-      description: "DJ Momentum brings pulsating deep house rhythms that move the crowd from the first beat. Known for seamless transitions and an instinct for the dancefloor, Momentum has played at festivals across the country.",
-      imageUrl: "",
-      email: "momentum@example.com",
-      phone: "+1 555-0101",
-      socialLinks: "https://instagram.com/djmomentum",
-      timeSlot: "22:00 - 00:00",
-      featured: true,
-      promoterImageUrl: "",
-    },
-    {
-      name: "Vox Luna",
-      genre: "Indie Pop / Electronic",
-      description: "Vox Luna blends ethereal vocals with electronic beats to create a dreamy sonic landscape. Her live performances weave looping and layering into a captivating one-woman show.",
-      imageUrl: "",
-      email: "voxluna@example.com",
-      phone: "+1 555-0102",
-      socialLinks: "https://instagram.com/voxluna",
-      timeSlot: "20:00 - 21:30",
-      featured: true,
-      promoterImageUrl: "",
-    },
-    {
-      name: "The Brass Assembly",
-      genre: "Jazz / Funk",
-      description: "A seven-piece brass ensemble that fuses classic jazz with modern funk grooves. The Brass Assembly brings high energy and tight arrangements to every performance.",
-      imageUrl: "",
-      email: "brass@example.com",
-      phone: "+1 555-0103",
-      socialLinks: "https://instagram.com/brassassembly",
-      timeSlot: "18:00 - 19:30",
-      featured: true,
-      promoterImageUrl: "",
-    },
-    {
-      name: "Neon Pulse",
-      genre: "Synthwave / Retro",
-      description: "Neon Pulse takes audiences on a journey through retro-futuristic soundscapes. Combining analogue synths with modern production, each set feels like a soundtrack to a film that hasn't been made yet.",
-      imageUrl: "",
-      email: "neonpulse@example.com",
-      phone: "+1 555-0104",
-      socialLinks: "https://instagram.com/neonpulse",
-      timeSlot: "00:00 - 02:00",
-      featured: true,
-      promoterImageUrl: "",
-    },
-    {
-      name: "Roots Collective",
-      genre: "Reggae / Dub",
-      description: "Roots Collective brings authentic reggae and dub vibrations with live instrumentation. The group keeps the tradition alive while adding their own contemporary twist.",
-      imageUrl: "",
-      email: "roots@example.com",
-      phone: "+1 555-0105",
-      socialLinks: "https://instagram.com/rootscollective",
-      timeSlot: "16:00 - 17:30",
-      featured: false,
-      promoterImageUrl: "",
-    },
-    {
-      name: "MC Frequency",
-      genre: "Hip Hop / Spoken Word",
-      description: "MC Frequency delivers sharp lyricism and powerful spoken word over original beats. A storyteller at heart, Frequency commands the stage with raw energy and authenticity.",
-      imageUrl: "",
-      email: "frequency@example.com",
-      phone: "+1 555-0106",
-      socialLinks: "https://instagram.com/mcfrequency",
-      timeSlot: "19:30 - 20:00",
-      featured: false,
-      promoterImageUrl: "",
-    },
-    {
-      name: "Aurora Keys",
-      genre: "Classical Crossover",
-      description: "Aurora Keys reimagines classical piano pieces with electronic arrangements. Her performances bridge centuries of musical tradition into something entirely new.",
-      imageUrl: "",
-      email: "aurora@example.com",
-      phone: "+1 555-0107",
-      socialLinks: "https://instagram.com/aurorakeys",
-      timeSlot: "15:00 - 16:00",
-      featured: false,
-      promoterImageUrl: "",
-    },
-    {
-      name: "Bass Theory",
-      genre: "Drum & Bass / Jungle",
-      description: "Bass Theory delivers relentless drum and bass sets that push the boundaries of tempo and texture. A favorite in the underground scene with a growing festival presence.",
-      imageUrl: "",
-      email: "basstheory@example.com",
-      phone: "+1 555-0108",
-      socialLinks: "https://instagram.com/basstheory",
-      timeSlot: "02:00 - 04:00",
-      featured: false,
-      promoterImageUrl: "",
-    },
-  ]);
-
-  await db.insert(events).values([
-    {
-      name: "Summer Sound Festival 2026",
-      description: "A full day of live music across three stages. Featuring local and international acts spanning house, jazz, indie, and more.",
-      imageUrl: "",
-      date: "July 15, 2026",
-      venue: "Riverside Park Amphitheatre",
-    },
-    {
-      name: "Midnight Sessions",
-      description: "An intimate late-night electronic music showcase in the heart of the city.",
-      imageUrl: "",
-      date: "August 22, 2026",
-      venue: "The Warehouse, Downtown",
-    },
-  ]);
+  const [existingSettings] = await db.select({ count: sql<number>`count(*)` }).from(siteSettings);
+  if (!existingSettings || Number(existingSettings.count) === 0) {
+    console.log("Seeding default settings...");
+    await db.insert(siteSettings).values([
+      { key: "global_company_name", value: "[ Company Name ]", type: "text", section: "global", label: "Company Name" },
+      { key: "global_logo_image", value: "", type: "image", section: "global", label: "Logo / Header Image" },
+      { key: "global_primary_color", value: "#000000", type: "color", section: "style", label: "Primary Color" },
+      { key: "global_secondary_color", value: "#ffffff", type: "color", section: "style", label: "Secondary Color" },
+      { key: "global_accent_color", value: "#666666", type: "color", section: "style", label: "Accent Color" },
+      { key: "global_font_heading", value: "Inter", type: "font", section: "style", label: "Heading Font" },
+      { key: "global_font_body", value: "Inter", type: "font", section: "style", label: "Body Font" },
+      { key: "login_welcome_text", value: "Welcome", type: "text", section: "login", label: "Welcome Heading" },
+      { key: "login_subtitle", value: "Sign in to access the platform", type: "text", section: "login", label: "Subtitle" },
+      { key: "login_header_image", value: "", type: "image", section: "login", label: "Header Image" },
+      { key: "landing_heading_text", value: "[ Heading Text ]", type: "text", section: "landing", label: "Heading Banner Text" },
+      { key: "landing_search_placeholder", value: "Search artists...", type: "text", section: "landing", label: "Search Placeholder" },
+      { key: "landing_banner_image", value: "", type: "image", section: "landing", label: "Bottom Banner Image" },
+      { key: "landing_enquiry_title", value: "Enquire / Subscribe", type: "text", section: "landing", label: "Enquiry Section Title" },
+      { key: "artists_page_title", value: "Artists", type: "text", section: "artists_dir", label: "Page Title" },
+      { key: "events_page_title", value: "Events", type: "text", section: "events", label: "Page Title" },
+      { key: "ds_page_title", value: "DS", type: "text", section: "ds", label: "Page Title" },
+      { key: "ds_content_text", value: "[ DS content area — customisable ]", type: "text", section: "ds", label: "Content Text" },
+      { key: "ds_content_image", value: "", type: "image", section: "ds", label: "Content Image" },
+      { key: "nav_home_label", value: "Home", type: "text", section: "navigation", label: "Home Button Label" },
+      { key: "nav_artists_label", value: "Artists", type: "text", section: "navigation", label: "Artists Button Label" },
+      { key: "nav_events_label", value: "Events", type: "text", section: "navigation", label: "Events Button Label" },
+      { key: "nav_ds_label", value: "DS", type: "text", section: "navigation", label: "DS Button Label" },
+      { key: "nav_profile_label", value: "Profile", type: "text", section: "navigation", label: "Profile Button Label" },
+    ]);
+  }
 
   console.log("Seeding complete.");
 }

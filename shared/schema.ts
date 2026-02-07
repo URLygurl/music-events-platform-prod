@@ -36,9 +36,19 @@ export const enquiries = pgTable("enquiries", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const siteSettings = pgTable("site_settings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull().default(""),
+  type: text("type").notNull().default("text"),
+  section: text("section").notNull().default("global"),
+  label: text("label").notNull().default(""),
+});
+
 export const insertArtistSchema = createInsertSchema(artists).omit({ id: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true });
 export const insertEnquirySchema = createInsertSchema(enquiries).omit({ id: true, createdAt: true });
+export const insertSiteSettingSchema = createInsertSchema(siteSettings).omit({ id: true });
 
 export type Artist = typeof artists.$inferSelect;
 export type InsertArtist = z.infer<typeof insertArtistSchema>;
@@ -46,3 +56,5 @@ export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Enquiry = typeof enquiries.$inferSelect;
 export type InsertEnquiry = z.infer<typeof insertEnquirySchema>;
+export type SiteSetting = typeof siteSettings.$inferSelect;
+export type InsertSiteSetting = z.infer<typeof insertSiteSettingSchema>;

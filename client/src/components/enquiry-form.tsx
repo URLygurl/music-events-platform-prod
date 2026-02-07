@@ -24,7 +24,7 @@ const enquiryFormSchema = z.object({
 
 type EnquiryFormValues = z.infer<typeof enquiryFormSchema>;
 
-export function EnquiryForm() {
+export function EnquiryForm({ title = "Enquire / Subscribe" }: { title?: string }) {
   const { toast } = useToast();
   const form = useForm<EnquiryFormValues>({
     resolver: zodResolver(enquiryFormSchema),
@@ -48,7 +48,7 @@ export function EnquiryForm() {
   return (
     <div className="border-t pt-6">
       <h3 className="text-sm font-medium mb-4 uppercase tracking-wider text-muted-foreground">
-        Enquire / Subscribe
+        {title}
       </h3>
       <Form {...form}>
         <form onSubmit={form.handleSubmit((d) => mutation.mutate(d))} className="space-y-3">

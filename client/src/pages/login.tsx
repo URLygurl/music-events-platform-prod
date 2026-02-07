@@ -2,27 +2,37 @@ import { ImagePlaceholder } from "@/components/image-placeholder";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
+import { useSettings } from "@/hooks/use-settings";
 
 export default function LoginPage() {
+  const { get } = useSettings();
+
+  const companyName = get("global_company_name", "[ Company Name ]");
+  const welcomeText = get("login_welcome_text", "Welcome");
+  const subtitle = get("login_subtitle", "Sign in to access the platform");
+  const headerImage = get("login_header_image");
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <div className="w-full border-b px-4 py-2">
         <p className="text-center text-xs tracking-widest uppercase text-muted-foreground">
-          [ Company Name ]
+          {companyName}
         </p>
       </div>
 
       <div className="w-full border-b">
-        <ImagePlaceholder label="Header Image" className="w-full h-14 rounded-none" />
+        {headerImage ? (
+          <img src={headerImage} alt="Header" className="w-full h-14 object-cover" />
+        ) : (
+          <ImagePlaceholder label="Header Image" className="w-full h-14 rounded-none" />
+        )}
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20 max-w-sm mx-auto w-full">
         <div className="w-full space-y-8">
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Welcome</h1>
-            <p className="text-sm text-muted-foreground">
-              Sign in to access the platform
-            </p>
+            <h1 className="text-2xl font-semibold tracking-tight">{welcomeText}</h1>
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
           </div>
 
           <div className="space-y-3">

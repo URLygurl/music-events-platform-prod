@@ -1,16 +1,18 @@
 import { useLocation, Link } from "wouter";
 import { Home, Music, CalendarDays, LayoutGrid, User } from "lucide-react";
-
-const navItems = [
-  { label: "Home", icon: Home, path: "/" },
-  { label: "Artists", icon: Music, path: "/artists" },
-  { label: "Events", icon: CalendarDays, path: "/events" },
-  { label: "DS", icon: LayoutGrid, path: "/ds" },
-  { label: "Profile", icon: User, path: "/profile" },
-];
+import { useSettings } from "@/hooks/use-settings";
 
 export function BottomNav() {
   const [location] = useLocation();
+  const { get } = useSettings();
+
+  const navItems = [
+    { label: get("nav_home_label", "Home"), icon: Home, path: "/" },
+    { label: get("nav_artists_label", "Artists"), icon: Music, path: "/artists" },
+    { label: get("nav_events_label", "Events"), icon: CalendarDays, path: "/events" },
+    { label: get("nav_ds_label", "DS"), icon: LayoutGrid, path: "/ds" },
+    { label: get("nav_profile_label", "Profile"), icon: User, path: "/profile" },
+  ];
 
   return (
     <nav

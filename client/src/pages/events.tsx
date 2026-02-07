@@ -4,17 +4,22 @@ import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { CalendarDays, MapPin } from "lucide-react";
+import { useSettings } from "@/hooks/use-settings";
 import type { Event } from "@shared/schema";
 
 export default function EventsPage() {
+  const { get } = useSettings();
+
   const { data: events, isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
   });
 
+  const pageTitle = get("events_page_title", "Events");
+
   return (
     <AppLayout>
       <div className="px-4 py-4">
-        <h2 className="text-lg font-semibold mb-4" data-testid="text-events-title">Events</h2>
+        <h2 className="text-lg font-semibold mb-4" data-testid="text-events-title">{pageTitle}</h2>
 
         <div className="space-y-4">
           {isLoading ? (

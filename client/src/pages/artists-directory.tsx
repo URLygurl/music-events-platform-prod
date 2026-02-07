@@ -6,14 +6,18 @@ import { SearchBar } from "@/components/search-bar";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight } from "lucide-react";
+import { useSettings } from "@/hooks/use-settings";
 import type { Artist } from "@shared/schema";
 
 export default function ArtistsDirectoryPage() {
   const [search, setSearch] = useState("");
+  const { get } = useSettings();
 
   const { data: artists, isLoading } = useQuery<Artist[]>({
     queryKey: ["/api/artists"],
   });
+
+  const pageTitle = get("artists_page_title", "Artists");
 
   const filtered = search
     ? artists?.filter((a) =>
@@ -25,7 +29,7 @@ export default function ArtistsDirectoryPage() {
   return (
     <AppLayout>
       <div className="px-4 py-4">
-        <h2 className="text-lg font-semibold mb-3" data-testid="text-artists-title">Artists</h2>
+        <h2 className="text-lg font-semibold mb-3" data-testid="text-artists-title">{pageTitle}</h2>
         <SearchBar value={search} onChange={setSearch} placeholder="Search artists..." />
       </div>
 

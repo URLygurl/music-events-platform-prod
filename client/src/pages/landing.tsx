@@ -6,10 +6,12 @@ import { ArtistTile } from "@/components/artist-tile";
 import { EnquiryForm } from "@/components/enquiry-form";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSettings } from "@/hooks/use-settings";
 import type { Artist, Event } from "@shared/schema";
 
 export default function LandingPage() {
   const [search, setSearch] = useState("");
+  const { get } = useSettings();
 
   const { data: artists, isLoading: loadingArtists } = useQuery<Artist[]>({
     queryKey: ["/api/artists"],
@@ -22,11 +24,16 @@ export default function LandingPage() {
   const featuredArtists = artists?.filter((a) => a.featured).slice(0, 4) || [];
   const currentEvent = events?.[0];
 
+  const headingText = get("landing_heading_text", "[ Heading Text ]");
+  const searchPlaceholder = get("landing_search_placeholder", "Search artists...");
+  const bannerImage = get("landing_banner_image");
+  const enquiryTitle = get("landing_enquiry_title", "Enquire / Subscribe");
+
   return (
     <AppLayout>
       <div className="border-b px-4 py-3">
         <p className="text-xs uppercase tracking-wider text-muted-foreground text-center" data-testid="text-heading-banner">
-          [ Heading Text ]
+          {headingText}
         </p>
       </div>
 
@@ -37,7 +44,7 @@ export default function LandingPage() {
       </div>
 
       <div className="px-4 pb-6">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search artists..." />
+        <SearchBar value={search} onChange={setSearch} placeholder={searchPlaceholder} />
       </div>
 
       <div className="px-4 pb-8">
@@ -66,10 +73,14 @@ export default function LandingPage() {
       </div>
 
       <div className="px-4 pb-8">
-        <EnquiryForm />
+        <EnquiryForm title={enquiryTitle} />
       </div>
 
-      <ImagePlaceholder label="Banner Image" className="w-full h-40 rounded-none" />
+      {bannerImage ? (
+        <img src={bannerImage} alt="Banner" className="w-full h-40 object-cover" data-testid="img-banner" />
+      ) : (
+        <ImagePlaceholder label="Banner Image" className="w-full h-40 rounded-none" />
+      )}
     </AppLayout>
   );
 }
