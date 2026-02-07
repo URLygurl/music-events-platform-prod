@@ -47,6 +47,7 @@ import {
   Type,
 } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import type { SiteSetting, Artist, Event, DsClient } from "@shared/schema";
 import { ARTIST_FIELD_LABELS, EVENT_FIELD_LABELS, DS_CLIENT_FIELD_LABELS, DEFAULT_ARTIST_VISIBILITY, DEFAULT_EVENT_VISIBILITY, DEFAULT_DS_CLIENT_VISIBILITY, getVisibleFields } from "@shared/schema";
 
@@ -737,6 +738,7 @@ function FontUploadSection({
 
 export default function AdminPage() {
   const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
   const [step, setStep] = useState(0);
   const [localValues, setLocalValues] = useState<Record<string, string>>({});
 
@@ -893,12 +895,26 @@ export default function AdminPage() {
   const sectionSettings = allSettings?.filter((s) => s.section === currentSection.id) || [];
   const hasChanges = Object.keys(localValues).some((k) => sectionSettings.find((s) => s.key === k));
 
-  if (loadingSettings) {
+  if (authLoading || loadingSettings) {
     return (
       <div className="min-h-screen bg-background p-4 max-w-lg mx-auto space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="p-6 max-w-sm w-full text-center space-y-4">
+          <h2 className="text-lg font-semibold">Admin Access Required</h2>
+          <p className="text-sm text-muted-foreground">Please log in to access the admin dashboard.</p>
+          <a href="/api/login">
+            <Button data-testid="button-admin-login">Log In</Button>
+          </a>
+        </Card>
       </div>
     );
   }

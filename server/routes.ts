@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema, insertDsClientSchema } from "@shared/schema";
-import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { appendToSheet, isGoogleSheetsConnected } from "./google-sheets";
 import multer from "multer";
 import path from "path";
@@ -99,7 +99,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/artists/export/csv", async (_req, res) => {
+  app.get("/api/artists/export/csv", isAuthenticated, async (_req, res) => {
     try {
       const allArtists = await storage.getArtists();
       const csvData = allArtists.map((a) => ({
@@ -138,7 +138,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/artists/import/csv", csvUpload.single("file"), async (req, res) => {
+  app.post("/api/artists/import/csv", isAuthenticated, csvUpload.single("file"), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const csvText = req.file.buffer.toString("utf-8");
@@ -207,7 +207,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/artists", async (req, res) => {
+  app.post("/api/artists", isAuthenticated, async (req, res) => {
     try {
       const parsed = insertArtistSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
@@ -219,7 +219,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/artists/:id", async (req, res) => {
+  app.patch("/api/artists/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid artist ID" });
@@ -232,7 +232,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/artists/:id", async (req, res) => {
+  app.delete("/api/artists/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid artist ID" });
@@ -267,7 +267,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/events", async (req, res) => {
+  app.post("/api/events", isAuthenticated, async (req, res) => {
     try {
       const parsed = insertEventSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
@@ -279,7 +279,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/events/:id", async (req, res) => {
+  app.patch("/api/events/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid event ID" });
@@ -292,7 +292,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/events/:id", async (req, res) => {
+  app.delete("/api/events/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid event ID" });
@@ -320,7 +320,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/enquiries", async (_req, res) => {
+  app.get("/api/enquiries", isAuthenticated, async (_req, res) => {
     try {
       const enquiries = await storage.getEnquiries();
       res.json(enquiries);
@@ -340,7 +340,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/settings", async (req, res) => {
+  app.put("/api/settings", isAuthenticated, async (req, res) => {
     try {
       const { settings } = req.body;
       if (!Array.isArray(settings)) return res.status(400).json({ message: "settings must be an array" });
@@ -353,7 +353,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/upload", upload.single("file"), (req, res) => {
+  app.post("/api/upload", isAuthenticated, upload.single("file"), (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const url = `/uploads/${req.file.filename}`;
@@ -384,7 +384,7 @@ export async function registerRoutes(
     },
   });
 
-  app.post("/api/upload/font", fontUpload.single("file"), (req, res) => {
+  app.post("/api/upload/font", isAuthenticated, fontUpload.single("file"), (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const url = `/uploads/${req.file.filename}`;
@@ -405,7 +405,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/media", async (req, res) => {
+  app.post("/api/media", isAuthenticated, async (req, res) => {
     try {
       const parsed = insertMediaItemSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
@@ -420,7 +420,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/media/:id", async (req, res) => {
+  app.patch("/api/media/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid media ID" });
@@ -437,7 +437,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/media/:id", async (req, res) => {
+  app.delete("/api/media/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid media ID" });
@@ -449,7 +449,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/donations", async (_req, res) => {
+  app.get("/api/donations", isAuthenticated, async (_req, res) => {
     try {
       const all = await storage.getDonations();
       res.json(all);
@@ -497,7 +497,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ds-clients", async (req, res) => {
+  app.post("/api/ds-clients", isAuthenticated, async (req, res) => {
     try {
       const parsed = insertDsClientSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
@@ -509,7 +509,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/ds-clients/:id", async (req, res) => {
+  app.patch("/api/ds-clients/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updated = await storage.updateDsClient(id, req.body);
@@ -521,7 +521,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/ds-clients/:id", async (req, res) => {
+  app.delete("/api/ds-clients/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteDsClient(id);
@@ -532,7 +532,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ai/chat", async (req, res) => {
+  app.post("/api/ai/chat", isAuthenticated, async (req, res) => {
     try {
       const { message, provider, apiKey } = req.body;
       if (!message || !apiKey) return res.status(400).json({ message: "Message and API key required" });

@@ -116,7 +116,9 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 ## Security Notes
 - Media embed URLs validated against allow-list (YouTube, Bandcamp, SoundCloud, Spotify)
 - Media PATCH endpoint sanitizes input fields (only title, url, type, embedUrl, order allowed)
-- Auth temporarily disabled; admin endpoints need auth gates before shipping
+- All admin/mutating API routes protected with `isAuthenticated` middleware (POST/PATCH/DELETE artists, events, media, ds-clients; PUT settings; uploads; CSV import/export; AI chat; GET enquiries/donations)
+- Public read routes remain open: GET artists, events, settings, media, ds-clients; POST enquiries/donations (forms)
+- Frontend admin/integrations pages gated with useAuth hook — unauthenticated users see login prompt
 - AI endpoint proxies to OpenAI/Anthropic; user brings own API key stored in settings
 
 ## Recent Changes
@@ -141,3 +143,4 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Added Font Upload card in Style Guide admin section: Feb 7, 2026
 - Integrated social links + share button on landing page, share button on artist/event detail pages: Feb 7, 2026
 - Added ds_clients table with full artist-equivalent fields, CRUD API routes, admin editor with visibility toggles, and public DS page client profiles: Feb 7, 2026
+- Hardened authentication: added isAuthenticated middleware to all 15+ admin/mutating API routes, frontend auth guards on admin & integrations pages: Feb 7, 2026

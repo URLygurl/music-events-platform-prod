@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { SiYoutube, SiBandcamp } from "react-icons/si";
 import { useSettings } from "@/hooks/use-settings";
+import { useAuth } from "@/hooks/use-auth";
 import type { SiteSetting, MediaItem } from "@shared/schema";
 import { Link } from "wouter";
 
@@ -424,6 +425,7 @@ function PaymentsSection({
 
 export default function IntegrationsPage() {
   const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
   const [localValues, setLocalValues] = useState<Record<string, string>>({});
 
   const { data: allSettings, isLoading } = useQuery<SiteSetting[]>({
@@ -467,11 +469,25 @@ export default function IntegrationsPage() {
 
   const hasChanges = Object.keys(localValues).length > 0;
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background p-4 max-w-lg mx-auto space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="p-6 max-w-sm w-full text-center space-y-4">
+          <h2 className="text-lg font-semibold">Admin Access Required</h2>
+          <p className="text-sm text-muted-foreground">Please log in to access integrations settings.</p>
+          <a href="/api/login">
+            <Button data-testid="button-integrations-login">Log In</Button>
+          </a>
+        </Card>
       </div>
     );
   }
