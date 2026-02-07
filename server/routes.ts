@@ -89,6 +89,23 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
+  app.get("/api/bootstrap-admin", isAuthenticated, async (req: any, res) => {
+    try {
+      const claims = req.user?.claims;
+      if (!claims?.sub) return res.status(401).json({ message: "Not authenticated" });
+      const existingAdmins = await storage.getUsers();
+      const hasSuperAdmin = existingAdmins.some((u: any) => u.role === "superadmin");
+      if (hasSuperAdmin) {
+        return res.status(403).json({ message: "Superadmin already exists" });
+      }
+      await storage.updateUserRole(claims.sub, "superadmin");
+      res.json({ message: "You are now superadmin. Refresh the page." });
+    } catch (error) {
+      console.error("Bootstrap admin error:", error);
+      res.status(500).json({ message: "Failed to bootstrap admin" });
+    }
+  });
+
   app.get("/api/artists", async (_req, res) => {
     try {
       const artists = await storage.getArtists();
