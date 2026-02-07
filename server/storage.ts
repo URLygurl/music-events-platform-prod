@@ -1,13 +1,14 @@
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import {
-  artists, events, enquiries, siteSettings, mediaItems, donations,
+  artists, events, enquiries, siteSettings, mediaItems, donations, dsClients,
   type Artist, type InsertArtist,
   type Event, type InsertEvent,
   type Enquiry, type InsertEnquiry,
   type SiteSetting, type InsertSiteSetting,
   type MediaItem, type InsertMediaItem,
   type Donation, type InsertDonation,
+  type DsClient, type InsertDsClient,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -34,6 +35,11 @@ export interface IStorage {
   deleteMediaItem(id: number): Promise<void>;
   getDonations(): Promise<Donation[]>;
   createDonation(donation: InsertDonation): Promise<Donation>;
+  getDsClients(): Promise<DsClient[]>;
+  getDsClient(id: number): Promise<DsClient | undefined>;
+  createDsClient(client: InsertDsClient): Promise<DsClient>;
+  updateDsClient(id: number, data: Partial<InsertDsClient>): Promise<DsClient | undefined>;
+  deleteDsClient(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -149,6 +155,29 @@ export class DatabaseStorage implements IStorage {
   async createDonation(donation: InsertDonation): Promise<Donation> {
     const [created] = await db.insert(donations).values(donation).returning();
     return created;
+  }
+
+  async getDsClients(): Promise<DsClient[]> {
+    return db.select().from(dsClients);
+  }
+
+  async getDsClient(id: number): Promise<DsClient | undefined> {
+    const [client] = await db.select().from(dsClients).where(eq(dsClients.id, id));
+    return client;
+  }
+
+  async createDsClient(client: InsertDsClient): Promise<DsClient> {
+    const [created] = await db.insert(dsClients).values(client).returning();
+    return created;
+  }
+
+  async updateDsClient(id: number, data: Partial<InsertDsClient>): Promise<DsClient | undefined> {
+    const [updated] = await db.update(dsClients).set(data).where(eq(dsClients.id, id)).returning();
+    return updated;
+  }
+
+  async deleteDsClient(id: number): Promise<void> {
+    await db.delete(dsClients).where(eq(dsClients.id, id));
   }
 }
 

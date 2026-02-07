@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema } from "@shared/schema";
+import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema, insertDsClientSchema } from "@shared/schema";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { appendToSheet, isGoogleSheetsConnected } from "./google-sheets";
 import multer from "multer";
@@ -472,6 +472,63 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error creating donation:", error);
       res.status(500).json({ message: "Failed to submit donation" });
+    }
+  });
+
+  app.get("/api/ds-clients", async (_req, res) => {
+    try {
+      const all = await storage.getDsClients();
+      res.json(all);
+    } catch (error) {
+      console.error("Error fetching DS clients:", error);
+      res.status(500).json({ message: "Failed to fetch DS clients" });
+    }
+  });
+
+  app.get("/api/ds-clients/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const client = await storage.getDsClient(id);
+      if (!client) return res.status(404).json({ message: "DS client not found" });
+      res.json(client);
+    } catch (error) {
+      console.error("Error fetching DS client:", error);
+      res.status(500).json({ message: "Failed to fetch DS client" });
+    }
+  });
+
+  app.post("/api/ds-clients", async (req, res) => {
+    try {
+      const parsed = insertDsClientSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
+      const client = await storage.createDsClient(parsed.data);
+      res.status(201).json(client);
+    } catch (error) {
+      console.error("Error creating DS client:", error);
+      res.status(500).json({ message: "Failed to create DS client" });
+    }
+  });
+
+  app.patch("/api/ds-clients/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updated = await storage.updateDsClient(id, req.body);
+      if (!updated) return res.status(404).json({ message: "DS client not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating DS client:", error);
+      res.status(500).json({ message: "Failed to update DS client" });
+    }
+  });
+
+  app.delete("/api/ds-clients/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteDsClient(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting DS client:", error);
+      res.status(500).json({ message: "Failed to delete DS client" });
     }
   });
 
