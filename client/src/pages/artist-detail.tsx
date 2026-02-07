@@ -86,11 +86,11 @@ export default function ArtistDetailPage() {
             <img
               src={artist.imageUrl}
               alt={artist.name}
-              className="w-full aspect-video object-cover"
+              className="w-full aspect-video object-cover rounded-b-2xl shadow-md"
               data-testid="img-artist-hero"
             />
           ) : (
-            <ImagePlaceholder label="Artist Hero Image" className="w-full aspect-video rounded-none" />
+            <ImagePlaceholder label="Artist Hero Image" className="w-full aspect-video rounded-b-2xl" />
           )}
         </div>
       )}
@@ -197,11 +197,11 @@ export default function ArtistDetailPage() {
             <img
               src={artist.imageUrl2}
               alt={`${artist.name} image 2`}
-              className="w-full h-48 object-cover"
+              className="w-full h-48 object-cover rounded-2xl shadow-md"
               data-testid="img-artist-secondary"
             />
           ) : (
-            <ImagePlaceholder label="Artist Image 2" className="w-full h-48 rounded-none" />
+            <ImagePlaceholder label="Artist Image 2" className="w-full h-48 rounded-2xl" />
           )}
         </div>
       )}
@@ -212,10 +212,10 @@ export default function ArtistDetailPage() {
             <img
               src={artist.promoterImageUrl}
               alt="Promoter"
-              className="w-full h-32 object-cover"
+              className="w-full h-32 object-cover rounded-2xl shadow-md"
             />
           ) : (
-            <ImagePlaceholder label="Promoter Image" className="w-full h-32 rounded-none" />
+            <ImagePlaceholder label="Promoter Image" className="w-full h-32 rounded-2xl" />
           )}
         </div>
       )}

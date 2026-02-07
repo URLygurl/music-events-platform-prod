@@ -33,14 +33,14 @@ export function TopRibbon() {
   const visibleAdminItems = ADMIN_ITEMS.filter((item) => get(item.settingKey, "true") === "true");
 
   return (
-    <header className="sticky top-0 z-50 w-full">
-      <div className="w-full border-b bg-background px-4 py-2">
+    <header className="sticky top-0 z-50 w-full shadow-md">
+      <div className="w-full border-b bg-background/90 backdrop-blur-md px-4 py-2">
         <p className="text-center text-xs tracking-widest uppercase text-muted-foreground" data-testid="text-company-name">
           {companyName}
         </p>
       </div>
 
-      <div className="w-full border-b bg-background">
+      <div className="w-full border-b bg-background/90 backdrop-blur-md">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex-1 h-8 rounded-md flex items-center justify-center overflow-visible">
             {logoImage ? (

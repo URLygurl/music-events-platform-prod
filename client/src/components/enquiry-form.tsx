@@ -46,7 +46,7 @@ export function EnquiryForm({ title = "Enquire / Subscribe" }: { title?: string 
   });
 
   return (
-    <div className="border-t pt-6">
+    <div className="rounded-2xl border bg-background/80 backdrop-blur-sm p-5 shadow-lg">
       <h3 className="text-sm font-medium mb-4 uppercase tracking-wider text-muted-foreground">
         {title}
       </h3>

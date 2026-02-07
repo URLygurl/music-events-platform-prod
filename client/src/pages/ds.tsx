@@ -34,11 +34,11 @@ function ClientProfile({ client }: { client: DsClient }) {
             <img
               src={client.imageUrl}
               alt={client.name}
-              className="w-full aspect-video object-cover"
+              className="w-full aspect-video object-cover rounded-b-2xl shadow-md"
               data-testid={`img-ds-client-hero-${client.id}`}
             />
           ) : (
-            <ImagePlaceholder label="Client Image" className="w-full aspect-video rounded-none" />
+            <ImagePlaceholder label="Client Image" className="w-full aspect-video rounded-2xl" />
           )}
         </div>
       )}
@@ -148,11 +148,11 @@ function ClientProfile({ client }: { client: DsClient }) {
             <img
               src={client.imageUrl2}
               alt={`${client.name} image 2`}
-              className="w-full h-48 object-cover"
+              className="w-full h-48 object-cover rounded-2xl shadow-md"
               data-testid={`img-ds-client-secondary-${client.id}`}
             />
           ) : (
-            <ImagePlaceholder label="Client Image 2" className="w-full h-48 rounded-none" />
+            <ImagePlaceholder label="Client Image 2" className="w-full h-48 rounded-2xl" />
           )}
         </div>
       )}
@@ -163,11 +163,11 @@ function ClientProfile({ client }: { client: DsClient }) {
             <img
               src={client.promoterImageUrl}
               alt="Promoter"
-              className="w-full h-32 object-cover"
+              className="w-full h-32 object-cover rounded-2xl shadow-md"
               data-testid={`img-ds-client-promoter-${client.id}`}
             />
           ) : (
-            <ImagePlaceholder label="Promoter Image" className="w-full h-32 rounded-none" />
+            <ImagePlaceholder label="Promoter Image" className="w-full h-32 rounded-2xl" />
           )}
         </div>
       )}
@@ -192,7 +192,7 @@ export default function DSPage() {
         <h2 className="text-lg font-semibold mb-4" data-testid="text-ds-title">{title}</h2>
         <div className="space-y-4">
           {image ? (
-            <img src={image} alt={title} className="w-full h-48 object-cover rounded-md" data-testid="img-ds-content" />
+            <img src={image} alt={title} className="w-full h-48 object-cover rounded-2xl shadow-md" data-testid="img-ds-content" />
           ) : (
             <ImagePlaceholder label="DS Content" className="w-full h-48" />
           )}

@@ -13,7 +13,7 @@ export function ImagePlaceholder({
 }: ImagePlaceholderProps) {
   return (
     <div
-      className={`border border-dashed border-muted-foreground/40 bg-muted/30 flex flex-col items-center justify-center gap-2 rounded-md ${className}`}
+      className={`border border-dashed border-muted-foreground/40 bg-muted/30 flex flex-col items-center justify-center gap-2 rounded-xl ${className}`}
       style={aspectRatio ? { aspectRatio } : undefined}
       data-testid={`placeholder-${label.toLowerCase().replace(/\s+/g, "-")}`}
     >

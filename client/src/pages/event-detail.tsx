@@ -146,7 +146,7 @@ export default function EventDetailPage() {
           <div className="border-t pt-4 space-y-2">
             <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Location</h3>
             {googleMapsEmbedUrl ? (
-              <div className="w-full rounded-md overflow-hidden border">
+              <div className="w-full rounded-xl overflow-hidden border shadow-md">
                 <iframe
                   src={googleMapsEmbedUrl}
                   width="100%"

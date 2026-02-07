@@ -94,9 +94,9 @@ export default function LandingPage() {
       </div>
 
       {bannerImage ? (
-        <img src={bannerImage} alt="Banner" className="w-full h-40 object-cover" data-testid="img-banner" />
+        <img src={bannerImage} alt="Banner" className="w-full h-40 object-cover rounded-xl" data-testid="img-banner" />
       ) : (
-        <ImagePlaceholder label="Banner Image" className="w-full h-40 rounded-none" />
+        <ImagePlaceholder label="Banner Image" className="w-full h-40 rounded-xl" />
       )}
     </AppLayout>
   );

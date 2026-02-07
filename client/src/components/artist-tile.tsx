@@ -11,8 +11,8 @@ export function ArtistTile({ artist }: ArtistTileProps) {
   return (
     <Link href={`/artists/${artist.id}`}>
       <div
-        className="rounded-md border bg-background cursor-pointer group"
-        style={{ boxShadow: "3px 4px 0px 0px hsl(var(--foreground) / 0.12)" }}
+        className="rounded-2xl border bg-background cursor-pointer group overflow-hidden"
+        style={{ boxShadow: "0 4px 16px rgba(0,0,0,0.10)" }}
         data-testid={`card-artist-${artist.id}`}
       >
         <div className="relative">
@@ -20,13 +20,13 @@ export function ArtistTile({ artist }: ArtistTileProps) {
             <img
               src={artist.imageUrl}
               alt={artist.name}
-              className="w-full aspect-square object-cover rounded-t-md"
+              className="w-full aspect-square object-cover"
             />
           ) : (
-            <ImagePlaceholder label={artist.name} className="w-full aspect-square rounded-t-md rounded-b-none" />
+            <ImagePlaceholder label={artist.name} className="w-full aspect-square" />
           )}
           <button
-            className="absolute bottom-2 right-2 w-8 h-8 rounded-full border bg-background/80 flex items-center justify-center"
+            className="absolute bottom-2 right-2 w-8 h-8 rounded-full border bg-background/80 backdrop-blur-sm flex items-center justify-center shadow-md"
             onClick={(e) => e.preventDefault()}
             data-testid={`button-play-${artist.id}`}
           >

@@ -127,7 +127,7 @@ export function MediaPlayer() {
         <Card className="overflow-visible">
           <div className="p-3 border-b flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-md border flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-xl border flex items-center justify-center flex-shrink-0">
                 {current.type === "youtube" ? (
                   <Video className="w-4 h-4" />
                 ) : (
@@ -178,12 +178,12 @@ export function MediaPlayer() {
             <button
               key={item.id}
               onClick={() => playItem(i)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${
                 currentIndex === i ? "bg-foreground text-background" : "hover-elevate"
               }`}
               data-testid={`button-play-media-${item.id}`}
             >
-              <div className="w-8 h-8 rounded-md border flex items-center justify-center flex-shrink-0"
+              <div className="w-8 h-8 rounded-xl border flex items-center justify-center flex-shrink-0"
                 style={currentIndex === i ? { borderColor: "currentColor" } : {}}
               >
                 {currentIndex === i ? (

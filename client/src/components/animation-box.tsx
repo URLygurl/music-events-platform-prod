@@ -45,7 +45,7 @@ export function AnimationBox({ text, style, backgroundImage, className = "" }: A
   return (
     <div
       ref={ref}
-      className={`relative overflow-hidden rounded-md ${className}`}
+      className={`relative overflow-hidden rounded-2xl shadow-lg ${className}`}
       data-testid={`animation-box-${style}`}
     >
       {backgroundImage && (

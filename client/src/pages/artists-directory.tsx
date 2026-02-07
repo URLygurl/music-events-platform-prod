@@ -52,15 +52,15 @@ export default function ArtistsDirectoryPage() {
           filtered?.map((artist) => (
             <Link key={artist.id} href={`/artists/${artist.id}`}>
               <div
-                className="flex items-center gap-3 px-4 py-3 hover-elevate cursor-pointer"
+                className="flex items-center gap-3 px-4 py-3 hover-elevate cursor-pointer rounded-xl"
                 data-testid={`row-artist-${artist.id}`}
               >
-                <div className="w-12 h-12 flex-shrink-0 rounded-md overflow-visible">
+                <div className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden">
                   {artist.imageUrl ? (
                     <img
                       src={artist.imageUrl}
                       alt={artist.name}
-                      className="w-12 h-12 object-cover rounded-md"
+                      className="w-12 h-12 object-cover rounded-xl"
                     />
                   ) : (
                     <ImagePlaceholder label="" className="w-12 h-12" />

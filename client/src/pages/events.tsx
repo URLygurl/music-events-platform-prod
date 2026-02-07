@@ -47,10 +47,10 @@ export default function EventsPage() {
                         <img
                           src={event.imageUrl}
                           alt={event.name}
-                          className="w-full h-40 object-cover rounded-t-md"
+                          className="w-full h-40 object-cover rounded-t-xl"
                         />
                       ) : (
-                        <ImagePlaceholder label="Event Image" className="w-full h-40 rounded-t-md rounded-b-none" />
+                        <ImagePlaceholder label="Event Image" className="w-full h-40 rounded-t-xl rounded-b-none" />
                       )
                     )}
                     <div className="p-4 space-y-2">

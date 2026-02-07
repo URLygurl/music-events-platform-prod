@@ -67,7 +67,7 @@ export default function DonatePage() {
     return (
       <AppLayout>
         <div className="px-4 py-12 text-center space-y-4">
-          <div className="w-16 h-16 rounded-full border-2 mx-auto flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full border-2 mx-auto flex items-center justify-center shadow-lg">
             <Check className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-semibold">Thank You</h2>
@@ -96,7 +96,7 @@ export default function DonatePage() {
             <button
               key={amt}
               onClick={() => handleAmountSelect(amt)}
-              className={`px-4 py-2 rounded-md border text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
                 selectedAmount === amt
                   ? "bg-foreground text-background border-foreground"
                   : "border-border hover-elevate"
