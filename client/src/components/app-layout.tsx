@@ -28,8 +28,8 @@ export function AppLayout({ children, showTopRibbon = true, bgKey }: AppLayoutPr
         <main className="flex-1 pb-24 max-w-lg mx-auto w-full">
           {children}
         </main>
-        <div className="fixed bottom-[68px] left-0 right-0 z-50 text-center pointer-events-none" data-testid="text-footer-credit">
-          <span className="text-muted-foreground" style={{ fontSize: '6px' }}>made with 🍑 by peachyweb</span>
+        <div className="fixed bottom-[72px] left-0 right-0 z-50 text-center pointer-events-none" data-testid="text-footer-credit">
+          <span className="text-muted-foreground" style={{ fontSize: '9px' }}>made with 🍑 by peachyweb</span>
         </div>
         <BottomNav />
       </div>
