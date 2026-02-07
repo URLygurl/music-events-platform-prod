@@ -449,7 +449,7 @@ export default function IntegrationsPage() {
   };
 
   const handleSave = () => {
-    const integrationSettings = allSettings?.filter((s) => s.section === "integrations") || [];
+    const integrationSettings = allSettings?.filter((s) => s.section === "integrations" || s.section === "integrations_sheets") || [];
     const toSave = integrationSettings.map((s) => ({
       key: s.key,
       value: localValues[s.key] ?? s.value,
@@ -459,7 +459,8 @@ export default function IntegrationsPage() {
     }));
     const newKeys = Object.keys(localValues).filter((k) => !integrationSettings.find((s) => s.key === k));
     for (const k of newKeys) {
-      toSave.push({ key: k, value: localValues[k], type: "text", section: "integrations", label: k });
+      const section = k.startsWith("google_sheet_") ? "integrations_sheets" : "integrations";
+      toSave.push({ key: k, value: localValues[k], type: "text", section, label: k });
     }
     saveMutation.mutate(toSave);
   };
@@ -539,6 +540,33 @@ export default function IntegrationsPage() {
             </section>
           );
         })}
+
+        <section>
+          <h2 className="text-base font-semibold mb-1">Google Sheets Sync</h2>
+          <p className="text-xs text-muted-foreground mb-3">
+            Connect form submissions and donations to Google Sheets. Enter the Spreadsheet ID followed by a pipe and sheet name (e.g. <code className="text-xs">1BxiMVs0XRA5nFMdK...|Sheet1</code>).
+          </p>
+          <Card className="p-4 space-y-3 overflow-visible">
+            <div className="space-y-1">
+              <Label className="text-xs">Enquiries Sheet</Label>
+              <Input
+                value={localValues["google_sheet_enquiries"] ?? (allSettings?.find(s => s.key === "google_sheet_enquiries")?.value || "")}
+                onChange={(e) => setLocal("google_sheet_enquiries", e.target.value)}
+                placeholder="SpreadsheetID|SheetName"
+                data-testid="input-sheet-enquiries"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Donations Sheet</Label>
+              <Input
+                value={localValues["google_sheet_donations"] ?? (allSettings?.find(s => s.key === "google_sheet_donations")?.value || "")}
+                onChange={(e) => setLocal("google_sheet_donations", e.target.value)}
+                placeholder="SpreadsheetID|SheetName"
+                data-testid="input-sheet-donations"
+              />
+            </div>
+          </Card>
+        </section>
 
         <section>
           <h2 className="text-base font-semibold mb-1">Media Player</h2>

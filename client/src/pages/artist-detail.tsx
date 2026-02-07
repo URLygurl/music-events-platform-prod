@@ -5,9 +5,11 @@ import { SearchBar } from "@/components/search-bar";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Mail, Phone, Globe } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Mail, Phone, Globe, Music, Video, LinkIcon } from "lucide-react";
 import { useState } from "react";
 import type { Artist } from "@shared/schema";
+import { getVisibleFields, DEFAULT_ARTIST_VISIBILITY } from "@shared/schema";
 
 export default function ArtistDetailPage() {
   const [, params] = useRoute("/artists/:id");
@@ -47,6 +49,22 @@ export default function ArtistDetailPage() {
     );
   }
 
+  const vis = getVisibleFields(artist.visibleFields, DEFAULT_ARTIST_VISIBILITY);
+
+  const linkItems = [
+    { key: "songLink1", value: artist.songLink1, label: "Song", icon: Music },
+    { key: "songLink2", value: artist.songLink2, label: "Song", icon: Music },
+    { key: "videoLink1", value: artist.videoLink1, label: "Video", icon: Video },
+    { key: "videoLink2", value: artist.videoLink2, label: "Video", icon: Video },
+    { key: "customLink1", value: artist.customLink1, label: "Link", icon: LinkIcon },
+    { key: "customLink2", value: artist.customLink2, label: "Link", icon: LinkIcon },
+    { key: "customLink3", value: artist.customLink3, label: "Link", icon: LinkIcon },
+    { key: "customLink4", value: artist.customLink4, label: "Link", icon: LinkIcon },
+    { key: "customLink5", value: artist.customLink5, label: "Link", icon: LinkIcon },
+  ];
+
+  const members = artist.members ? artist.members.split(",").map((m) => m.trim()).filter(Boolean) : [];
+
   return (
     <AppLayout showTopRibbon={false}>
       <div className="px-4 py-3 flex items-center gap-2">
@@ -60,68 +78,145 @@ export default function ArtistDetailPage() {
         </div>
       </div>
 
-      <div className="w-full">
-        {artist.imageUrl ? (
-          <img
-            src={artist.imageUrl}
-            alt={artist.name}
-            className="w-full aspect-video object-cover"
-            data-testid="img-artist-hero"
-          />
-        ) : (
-          <ImagePlaceholder label="Artist Hero Image" className="w-full aspect-video rounded-none" />
-        )}
-      </div>
-
-      <div className="px-4 py-6 space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-artist-name">{artist.name}</h1>
-          <p className="text-sm text-muted-foreground">{artist.genre}</p>
-          {artist.timeSlot && (
-            <p className="text-xs text-muted-foreground mt-1">{artist.timeSlot}</p>
+      {vis.imageUrl !== false && (
+        <div className="w-full">
+          {artist.imageUrl ? (
+            <img
+              src={artist.imageUrl}
+              alt={artist.name}
+              className="w-full aspect-video object-cover"
+              data-testid="img-artist-hero"
+            />
+          ) : (
+            <ImagePlaceholder label="Artist Hero Image" className="w-full aspect-video rounded-none" />
           )}
         </div>
+      )}
 
-        <div className="border-t pt-4">
-          <p className="text-sm leading-relaxed" data-testid="text-artist-description">
-            {artist.description}
-          </p>
-        </div>
+      <div className="px-4 py-6 space-y-4">
+        {vis.name !== false && (
+          <div>
+            <h1 className="text-2xl font-bold" data-testid="text-artist-name">{artist.name}</h1>
+            {vis.genre !== false && artist.genre && (
+              <p className="text-sm text-muted-foreground">{artist.genre}</p>
+            )}
+            {vis.timeSlot !== false && artist.timeSlot && (
+              <p className="text-xs text-muted-foreground mt-1">{artist.timeSlot}</p>
+            )}
+          </div>
+        )}
+
+        {vis.origin !== false && artist.origin && (
+          <div className="text-sm text-muted-foreground" data-testid="text-artist-origin">
+            Origin: {artist.origin}
+          </div>
+        )}
+
+        {vis.members !== false && members.length > 0 && (
+          <div className="space-y-1" data-testid="section-members">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Members</h3>
+            <div className="flex flex-wrap gap-1">
+              {members.map((m) => (
+                <Badge key={m} variant="secondary" className="text-xs">{m}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {vis.bio !== false && artist.bio && (
+          <div className="border-t pt-4">
+            <p className="text-sm leading-relaxed" data-testid="text-artist-bio">{artist.bio}</p>
+          </div>
+        )}
+
+        {vis.description !== false && artist.description && (
+          <div className="border-t pt-4">
+            <p className="text-sm leading-relaxed" data-testid="text-artist-description">
+              {artist.description}
+            </p>
+          </div>
+        )}
 
         <div className="border-t pt-4 space-y-2">
           <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Contact</h3>
-          {artist.email && (
+          {vis.email !== false && artist.email && (
             <a href={`mailto:${artist.email}`} className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5" data-testid="link-email">
               <Mail className="w-4 h-4 text-muted-foreground" />
               {artist.email}
             </a>
           )}
-          {artist.phone && (
+          {vis.phone !== false && artist.phone && (
             <a href={`tel:${artist.phone}`} className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5" data-testid="link-phone">
               <Phone className="w-4 h-4 text-muted-foreground" />
               {artist.phone}
             </a>
           )}
-          {artist.socialLinks && (
+          {vis.website !== false && artist.website && (
+            <a href={artist.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5" data-testid="link-website">
+              <Globe className="w-4 h-4 text-muted-foreground" />
+              {artist.website}
+            </a>
+          )}
+          {vis.socialLinks !== false && artist.socialLinks && (
             <a href={artist.socialLinks} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5" data-testid="link-social">
               <Globe className="w-4 h-4 text-muted-foreground" />
               {artist.socialLinks}
             </a>
           )}
         </div>
-      </div>
 
-      <div className="w-full">
-        {artist.promoterImageUrl ? (
-          <img
-            src={artist.promoterImageUrl}
-            alt="Promoter"
-            className="w-full h-32 object-cover"
-          />
-        ) : (
-          <ImagePlaceholder label="Promoter Image" className="w-full h-32 rounded-none" />
+        {linkItems.some((l) => vis[l.key] !== false && l.value) && (
+          <div className="border-t pt-4 space-y-2">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Links</h3>
+            {linkItems.map((l) => {
+              if (vis[l.key] === false || !l.value) return null;
+              const Icon = l.icon;
+              return (
+                <a
+                  key={l.key}
+                  href={l.value}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5"
+                  data-testid={`link-${l.key}`}
+                >
+                  <Icon className="w-4 h-4 text-muted-foreground" />
+                  {l.value}
+                </a>
+              );
+            })}
+          </div>
         )}
       </div>
+
+      {vis.imageUrl2 !== false && (
+        <div className="w-full">
+          {artist.imageUrl2 ? (
+            <img
+              src={artist.imageUrl2}
+              alt={`${artist.name} image 2`}
+              className="w-full h-48 object-cover"
+              data-testid="img-artist-secondary"
+            />
+          ) : (
+            <ImagePlaceholder label="Artist Image 2" className="w-full h-48 rounded-none" />
+          )}
+        </div>
+      )}
+
+      {vis.promoterImageUrl !== false && (
+        <div className="w-full">
+          {artist.promoterImageUrl ? (
+            <img
+              src={artist.promoterImageUrl}
+              alt="Promoter"
+              className="w-full h-32 object-cover"
+            />
+          ) : (
+            <ImagePlaceholder label="Promoter Image" className="w-full h-32 rounded-none" />
+          )}
+        </div>
+      )}
     </AppLayout>
   );
 }

@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { AppLayout } from "@/components/app-layout";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 import type { Event } from "@shared/schema";
+import { getVisibleFields, DEFAULT_EVENT_VISIBILITY } from "@shared/schema";
 
 export default function EventsPage() {
   const { get } = useSettings();
@@ -35,39 +37,52 @@ export default function EventsPage() {
               No events yet
             </div>
           ) : (
-            events?.map((event) => (
-              <Card key={event.id} className="overflow-visible" data-testid={`card-event-${event.id}`}>
-                {event.imageUrl ? (
-                  <img
-                    src={event.imageUrl}
-                    alt={event.name}
-                    className="w-full h-40 object-cover rounded-t-md"
-                  />
-                ) : (
-                  <ImagePlaceholder label="Event Image" className="w-full h-40 rounded-t-md rounded-b-none" />
-                )}
-                <div className="p-4 space-y-2">
-                  <h3 className="font-semibold" data-testid={`text-event-name-${event.id}`}>{event.name}</h3>
-                  {event.description && (
-                    <p className="text-sm text-muted-foreground">{event.description}</p>
-                  )}
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                    {event.date && (
-                      <span className="flex items-center gap-1">
-                        <CalendarDays className="w-3.5 h-3.5" />
-                        {event.date}
-                      </span>
+            events?.map((event) => {
+              const vis = getVisibleFields(event.visibleFields, DEFAULT_EVENT_VISIBILITY);
+              return (
+                <Link key={event.id} href={`/events/${event.id}`}>
+                  <Card className="overflow-visible hover-elevate cursor-pointer" data-testid={`card-event-${event.id}`}>
+                    {vis.imageUrl !== false && (
+                      event.imageUrl ? (
+                        <img
+                          src={event.imageUrl}
+                          alt={event.name}
+                          className="w-full h-40 object-cover rounded-t-md"
+                        />
+                      ) : (
+                        <ImagePlaceholder label="Event Image" className="w-full h-40 rounded-t-md rounded-b-none" />
+                      )
                     )}
-                    {event.venue && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5" />
-                        {event.venue}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))
+                    <div className="p-4 space-y-2">
+                      <h3 className="font-semibold" data-testid={`text-event-name-${event.id}`}>{event.name}</h3>
+                      {vis.description !== false && event.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                        {vis.date !== false && event.date && (
+                          <span className="flex items-center gap-1">
+                            <CalendarDays className="w-3.5 h-3.5" />
+                            {event.date}
+                          </span>
+                        )}
+                        {vis.time !== false && event.time && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            {event.time}
+                          </span>
+                        )}
+                        {vis.venue !== false && event.venue && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5" />
+                            {event.venue}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              );
+            })
           )}
         </div>
       </div>

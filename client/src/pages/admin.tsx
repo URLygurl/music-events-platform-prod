@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -37,9 +38,13 @@ import {
   X,
   Plug,
   Menu,
+  Copy,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Link } from "wouter";
 import type { SiteSetting, Artist, Event } from "@shared/schema";
+import { ARTIST_FIELD_LABELS, EVENT_FIELD_LABELS, DEFAULT_ARTIST_VISIBILITY, DEFAULT_EVENT_VISIBILITY, getVisibleFields } from "@shared/schema";
 
 const FONT_OPTIONS = [
   "Inter", "Roboto", "Open Sans", "Montserrat", "Poppins",
@@ -220,6 +225,86 @@ function SettingsSection({
   );
 }
 
+function FieldWithToggle({
+  fieldKey,
+  visible,
+  onToggleVisible,
+  children,
+}: {
+  fieldKey: string;
+  visible: boolean;
+  onToggleVisible: (key: string, val: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`relative ${!visible ? "opacity-40" : ""}`}>
+      <div className="absolute top-0 right-0 z-10">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-6 w-6"
+          onClick={() => onToggleVisible(fieldKey, !visible)}
+          data-testid={`toggle-vis-${fieldKey}`}
+        >
+          {visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+        </Button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function MembersTagInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [inputVal, setInputVal] = useState("");
+  const tags = value ? value.split(",").map((t) => t.trim()).filter(Boolean) : [];
+
+  const addTag = () => {
+    const trimmed = inputVal.trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      onChange([...tags, trimmed].join(", "));
+    }
+    setInputVal("");
+  };
+
+  const removeTag = (tag: string) => {
+    onChange(tags.filter((t) => t !== tag).join(", "));
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1">
+        {tags.map((tag) => (
+          <Badge key={tag} variant="secondary" className="text-xs gap-1">
+            {tag}
+            <button onClick={() => removeTag(tag)} className="ml-0.5">
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </Badge>
+        ))}
+      </div>
+      <div className="flex gap-1">
+        <Input
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+          placeholder="Add member..."
+          className="flex-1"
+          data-testid="input-add-member"
+        />
+        <Button size="sm" variant="outline" onClick={addTag} data-testid="button-add-member-tag">
+          <Plus className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function ArtistEditor({
   artist,
   onSave,
@@ -233,10 +318,43 @@ function ArtistEditor({
 }) {
   const [local, setLocal] = useState<Partial<Artist>>({});
   const merged = { ...artist, ...local };
+  const vis = getVisibleFields(merged.visibleFields as string, DEFAULT_ARTIST_VISIBILITY);
 
-  const set = (field: string, value: string | boolean) => {
+  const set = (field: string, value: string | boolean | null) => {
     setLocal((prev) => ({ ...prev, [field]: value }));
   };
+
+  const setVis = (fieldKey: string, val: boolean) => {
+    const newVis = { ...vis, [fieldKey]: val };
+    set("visibleFields", JSON.stringify(newVis));
+  };
+
+  const imageFields: Array<{ key: keyof Artist; label: string }> = [
+    { key: "imageUrl", label: "Image 1" },
+    { key: "imageUrl2", label: "Image 2" },
+  ];
+
+  const textFields: Array<{ key: keyof Artist; label: string; multiline?: boolean }> = [
+    { key: "name", label: "Band Name" },
+    { key: "origin", label: "Origin" },
+    { key: "bio", label: "Bio", multiline: true },
+    { key: "genre", label: "Genre" },
+    { key: "description", label: "Description", multiline: true },
+    { key: "timeSlot", label: "Time Slot" },
+    { key: "website", label: "Website" },
+    { key: "phone", label: "Phone" },
+    { key: "email", label: "Email" },
+    { key: "socialLinks", label: "Social Links" },
+    { key: "songLink1", label: "Song Link 1" },
+    { key: "songLink2", label: "Song Link 2" },
+    { key: "videoLink1", label: "Video Link 1" },
+    { key: "videoLink2", label: "Video Link 2" },
+    { key: "customLink1", label: "Custom Link 1" },
+    { key: "customLink2", label: "Custom Link 2" },
+    { key: "customLink3", label: "Custom Link 3" },
+    { key: "customLink4", label: "Custom Link 4" },
+    { key: "customLink5", label: "Custom Link 5" },
+  ];
 
   return (
     <Card className="p-4 space-y-3 overflow-visible">
@@ -256,45 +374,59 @@ function ArtistEditor({
           </Button>
         </div>
       </div>
+
       <div className="grid grid-cols-1 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Name</Label>
-          <Input value={merged.name} onChange={(e) => set("name", e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Genre</Label>
-          <Input value={merged.genre} onChange={(e) => set("genre", e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Description</Label>
-          <Textarea value={merged.description} onChange={(e) => set("description", e.target.value)} rows={3} className="resize-none" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Time Slot</Label>
-          <Input value={merged.timeSlot || ""} onChange={(e) => set("timeSlot", e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Email</Label>
-          <Input value={merged.email || ""} onChange={(e) => set("email", e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Phone</Label>
-          <Input value={merged.phone || ""} onChange={(e) => set("phone", e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Social Links</Label>
-          <Input value={merged.socialLinks || ""} onChange={(e) => set("socialLinks", e.target.value)} />
-        </div>
-        <ImageUploadField
-          label="Artist Image"
-          value={merged.imageUrl}
-          onChange={(v) => set("imageUrl", v)}
-        />
-        <ImageUploadField
-          label="Promoter Image"
-          value={merged.promoterImageUrl || ""}
-          onChange={(v) => set("promoterImageUrl", v)}
-        />
+        {imageFields.map((f) => (
+          <FieldWithToggle key={f.key} fieldKey={f.key} visible={vis[f.key] !== false} onToggleVisible={setVis}>
+            <ImageUploadField
+              label={f.label}
+              value={(merged[f.key] as string) || ""}
+              onChange={(v) => set(f.key, v)}
+            />
+          </FieldWithToggle>
+        ))}
+
+        <FieldWithToggle fieldKey="members" visible={vis.members !== false} onToggleVisible={setVis}>
+          <div className="space-y-1">
+            <Label className="text-xs">Members</Label>
+            <MembersTagInput
+              value={(merged.members as string) || ""}
+              onChange={(v) => set("members", v)}
+            />
+          </div>
+        </FieldWithToggle>
+
+        {textFields.map((f) => (
+          <FieldWithToggle key={f.key} fieldKey={f.key} visible={vis[f.key] !== false} onToggleVisible={setVis}>
+            <div className="space-y-1">
+              <Label className="text-xs">{f.label}</Label>
+              {f.multiline ? (
+                <Textarea
+                  value={(merged[f.key] as string) || ""}
+                  onChange={(e) => set(f.key, e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                  data-testid={`input-artist-${f.key}-${artist.id}`}
+                />
+              ) : (
+                <Input
+                  value={(merged[f.key] as string) || ""}
+                  onChange={(e) => set(f.key, e.target.value)}
+                  data-testid={`input-artist-${f.key}-${artist.id}`}
+                />
+              )}
+            </div>
+          </FieldWithToggle>
+        ))}
+
+        <FieldWithToggle fieldKey="promoterImageUrl" visible={vis.promoterImageUrl !== false} onToggleVisible={setVis}>
+          <ImageUploadField
+            label="Promoter Image"
+            value={(merged.promoterImageUrl as string) || ""}
+            onChange={(v) => set("promoterImageUrl", v)}
+          />
+        </FieldWithToggle>
+
         <div className="flex items-center gap-2">
           <Switch
             checked={merged.featured ?? false}
@@ -321,10 +453,29 @@ function EventEditor({
 }) {
   const [local, setLocal] = useState<Partial<Event>>({});
   const merged = { ...event, ...local };
+  const vis = getVisibleFields(merged.visibleFields as string, DEFAULT_EVENT_VISIBILITY);
 
   const set = (field: string, value: string) => {
     setLocal((prev) => ({ ...prev, [field]: value }));
   };
+
+  const setVis = (fieldKey: string, val: boolean) => {
+    const newVis = { ...vis, [fieldKey]: val };
+    set("visibleFields", JSON.stringify(newVis));
+  };
+
+  const fields: Array<{ key: keyof Event; label: string; multiline?: boolean }> = [
+    { key: "name", label: "Event Name" },
+    { key: "description", label: "Description", multiline: true },
+    { key: "date", label: "Start Date" },
+    { key: "time", label: "Start Time" },
+    { key: "endDate", label: "End Date" },
+    { key: "endTime", label: "End Time" },
+    { key: "venue", label: "Venue" },
+    { key: "address", label: "Address" },
+    { key: "googleMapsUrl", label: "Google Maps URL" },
+    { key: "ticketUrl", label: "Ticket Link" },
+  ];
 
   return (
     <Card className="p-4 space-y-3 overflow-visible">
@@ -344,28 +495,38 @@ function EventEditor({
           </Button>
         </div>
       </div>
+
       <div className="grid grid-cols-1 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Name</Label>
-          <Input value={merged.name} onChange={(e) => set("name", e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Description</Label>
-          <Textarea value={merged.description || ""} onChange={(e) => set("description", e.target.value)} rows={3} className="resize-none" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Date</Label>
-          <Input value={merged.date || ""} onChange={(e) => set("date", e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Venue</Label>
-          <Input value={merged.venue || ""} onChange={(e) => set("venue", e.target.value)} />
-        </div>
-        <ImageUploadField
-          label="Event Image"
-          value={merged.imageUrl || ""}
-          onChange={(v) => set("imageUrl", v)}
-        />
+        <FieldWithToggle fieldKey="imageUrl" visible={vis.imageUrl !== false} onToggleVisible={setVis}>
+          <ImageUploadField
+            label="Event Image"
+            value={(merged.imageUrl as string) || ""}
+            onChange={(v) => set("imageUrl", v)}
+          />
+        </FieldWithToggle>
+
+        {fields.map((f) => (
+          <FieldWithToggle key={f.key} fieldKey={f.key} visible={vis[f.key] !== false} onToggleVisible={setVis}>
+            <div className="space-y-1">
+              <Label className="text-xs">{f.label}</Label>
+              {f.multiline ? (
+                <Textarea
+                  value={(merged[f.key] as string) || ""}
+                  onChange={(e) => set(f.key, e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                  data-testid={`input-event-${f.key}-${event.id}`}
+                />
+              ) : (
+                <Input
+                  value={(merged[f.key] as string) || ""}
+                  onChange={(e) => set(f.key, e.target.value)}
+                  data-testid={`input-event-${f.key}-${event.id}`}
+                />
+              )}
+            </div>
+          </FieldWithToggle>
+        ))}
       </div>
     </Card>
   );
@@ -425,15 +586,16 @@ export default function AdminPage() {
   const addArtistMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/artists", {
-        name: "New Artist",
-        genre: "Genre",
-        description: "Description goes here.",
+        name: "",
+        genre: "",
+        description: "",
         imageUrl: "",
+        visibleFields: JSON.stringify(DEFAULT_ARTIST_VISIBILITY),
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/artists"] });
-      toast({ title: "Added", description: "New artist created." });
+      toast({ title: "Added", description: "Empty artist block created." });
     },
   });
 
@@ -460,12 +622,13 @@ export default function AdminPage() {
   const addEventMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/events", {
-        name: "New Event",
+        name: "",
+        visibleFields: JSON.stringify(DEFAULT_EVENT_VISIBILITY),
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      toast({ title: "Added", description: "New event created." });
+      toast({ title: "Added", description: "Empty event block created." });
     },
   });
 
@@ -597,6 +760,11 @@ export default function AdminPage() {
                   </label>
                 </div>
               </Card>
+
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Eye className="w-3 h-3" /> Use the eye icon on each field to control visibility on the public page
+              </p>
+
               {loadingArtists ? (
                 <Skeleton className="h-40 w-full" />
               ) : (
@@ -622,6 +790,10 @@ export default function AdminPage() {
             </div>
           ) : currentSection.id === "events" ? (
             <div className="space-y-4">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Eye className="w-3 h-3" /> Use the eye icon on each field to control visibility on the public page
+              </p>
+
               {loadingEvents ? (
                 <Skeleton className="h-40 w-full" />
               ) : (
@@ -653,42 +825,43 @@ export default function AdminPage() {
                 setLocal={setLocal}
               />
               {sectionSettings.length > 0 && (
-                <Button
-                  className="w-full mt-6"
-                  onClick={handleSaveSettings}
-                  disabled={saveMutation.isPending || !hasChanges}
-                  data-testid="button-save-settings"
-                >
-                  {saveMutation.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              )}
-              {sectionSettings.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No settings for this section yet.
-                </p>
+                <div className="pt-4">
+                  <Button
+                    onClick={handleSaveSettings}
+                    disabled={saveMutation.isPending || !hasChanges}
+                    className="w-full"
+                    data-testid="button-save-settings"
+                  >
+                    {saveMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
               )}
             </>
           )}
         </div>
-      </div>
 
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-background z-50">
-        <div className="max-w-lg mx-auto flex items-center justify-between px-4 py-3">
-          <Button
-            variant="outline"
-            onClick={() => setStep(Math.max(0, step - 1))}
-            disabled={step === 0}
-            data-testid="button-prev-section"
-          >
-            <ChevronLeft className="w-4 h-4 mr-1" /> Previous
-          </Button>
-          <Button
-            onClick={() => setStep(Math.min(SECTIONS.length - 1, step + 1))}
-            disabled={step === SECTIONS.length - 1}
-            data-testid="button-next-section"
-          >
-            Next <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
+        <div className="fixed bottom-0 left-0 right-0 border-t bg-background px-4 py-3 z-50">
+          <div className="max-w-lg mx-auto flex items-center justify-between gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStep(Math.max(0, step - 1))}
+              disabled={step === 0}
+              data-testid="button-prev-section"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+            </Button>
+            <span className="text-xs text-muted-foreground">{currentSection.label}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStep(Math.min(SECTIONS.length - 1, step + 1))}
+              disabled={step === SECTIONS.length - 1}
+              data-testid="button-next-section"
+            >
+              Next <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

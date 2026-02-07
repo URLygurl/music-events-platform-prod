@@ -70,6 +70,8 @@ export async function seedDatabase() {
     { key: "menu_show_donate", value: "true", type: "toggle", section: "navigation", label: "Show Donate in Menu" },
     { key: "menu_show_admin", value: "true", type: "toggle", section: "navigation", label: "Show Admin in Menu" },
     { key: "menu_show_integrations", value: "true", type: "toggle", section: "navigation", label: "Show Integrations in Menu" },
+    { key: "google_sheet_enquiries", value: "", type: "text", section: "integrations_sheets", label: "Enquiries Sheet (ID|SheetName)" },
+    { key: "google_sheet_donations", value: "", type: "text", section: "integrations_sheets", label: "Donations Sheet (ID|SheetName)" },
   ];
   for (const s of requiredSettings) {
     await db.insert(siteSettings).values(s).onConflictDoNothing({ target: siteSettings.key });

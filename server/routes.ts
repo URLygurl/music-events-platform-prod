@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema } from "@shared/schema";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { appendToSheet, isGoogleSheetsConnected } from "./google-sheets";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -64,6 +65,22 @@ const csvUpload = multer({
   },
 });
 
+async function tryAppendToSheet(sheetSettingKey: string, values: string[][]) {
+  try {
+    const setting = await storage.getSetting(sheetSettingKey);
+    if (!setting?.value) return;
+    const connected = await isGoogleSheetsConnected();
+    if (!connected) return;
+    const parts = setting.value.split("|");
+    const spreadsheetId = parts[0]?.trim();
+    const sheetName = parts[1]?.trim() || "Sheet1";
+    if (!spreadsheetId) return;
+    await appendToSheet(spreadsheetId, sheetName, values);
+  } catch (error) {
+    console.error(`Failed to append to Google Sheet (${sheetSettingKey}):`, error);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -88,13 +105,27 @@ export async function registerRoutes(
         name: a.name,
         genre: a.genre,
         description: a.description,
+        origin: a.origin || "",
+        members: a.members || "",
+        bio: a.bio || "",
+        website: a.website || "",
         email: a.email || "",
         phone: a.phone || "",
         socialLinks: a.socialLinks || "",
         timeSlot: a.timeSlot || "",
         featured: a.featured ? "true" : "false",
         imageUrl: a.imageUrl || "",
+        imageUrl2: a.imageUrl2 || "",
         promoterImageUrl: a.promoterImageUrl || "",
+        songLink1: a.songLink1 || "",
+        songLink2: a.songLink2 || "",
+        videoLink1: a.videoLink1 || "",
+        videoLink2: a.videoLink2 || "",
+        customLink1: a.customLink1 || "",
+        customLink2: a.customLink2 || "",
+        customLink3: a.customLink3 || "",
+        customLink4: a.customLink4 || "",
+        customLink5: a.customLink5 || "",
       }));
       const csv = Papa.unparse(csvData);
       res.setHeader("Content-Type", "text/csv");
@@ -120,22 +151,38 @@ export async function registerRoutes(
       }
       let imported = 0;
       let skipped = 0;
+      const g = (row: Record<string, string>, ...keys: string[]) => {
+        for (const k of keys) { if (row[k]?.trim()) return row[k].trim(); }
+        return "";
+      };
       for (const row of rows) {
-        const name = (row.name || row.Name || "").trim();
-        const genre = (row.genre || row.Genre || "").trim();
-        const description = (row.description || row.Description || "").trim();
+        const name = g(row, "name", "Name");
         if (!name) { skipped++; continue; }
         await storage.createArtist({
           name,
-          genre: genre || "Uncategorized",
-          description: description || "",
-          imageUrl: (row.imageUrl || row.image_url || row.ImageUrl || "").trim(),
-          email: (row.email || row.Email || "").trim() || null,
-          phone: (row.phone || row.Phone || "").trim() || null,
-          socialLinks: (row.socialLinks || row.social_links || row.SocialLinks || "").trim() || null,
-          timeSlot: (row.timeSlot || row.time_slot || row.TimeSlot || "").trim() || null,
-          featured: ["true", "yes", "1"].includes((row.featured || row.Featured || "").trim().toLowerCase()),
-          promoterImageUrl: (row.promoterImageUrl || row.promoter_image_url || "").trim() || null,
+          genre: g(row, "genre", "Genre") || "Uncategorized",
+          description: g(row, "description", "Description") || "",
+          imageUrl: g(row, "imageUrl", "image_url", "ImageUrl"),
+          imageUrl2: g(row, "imageUrl2", "image_url_2") || null,
+          email: g(row, "email", "Email") || null,
+          phone: g(row, "phone", "Phone") || null,
+          socialLinks: g(row, "socialLinks", "social_links", "SocialLinks") || null,
+          timeSlot: g(row, "timeSlot", "time_slot", "TimeSlot") || null,
+          featured: ["true", "yes", "1"].includes(g(row, "featured", "Featured").toLowerCase()),
+          promoterImageUrl: g(row, "promoterImageUrl", "promoter_image_url") || null,
+          origin: g(row, "origin", "Origin") || null,
+          members: g(row, "members", "Members") || null,
+          bio: g(row, "bio", "Bio") || null,
+          website: g(row, "website", "Website") || null,
+          songLink1: g(row, "songLink1", "song_link_1") || null,
+          songLink2: g(row, "songLink2", "song_link_2") || null,
+          videoLink1: g(row, "videoLink1", "video_link_1") || null,
+          videoLink2: g(row, "videoLink2", "video_link_2") || null,
+          customLink1: g(row, "customLink1", "custom_link_1") || null,
+          customLink2: g(row, "customLink2", "custom_link_2") || null,
+          customLink3: g(row, "customLink3", "custom_link_3") || null,
+          customLink4: g(row, "customLink4", "custom_link_4") || null,
+          customLink5: g(row, "customLink5", "custom_link_5") || null,
         });
         imported++;
       }
@@ -206,6 +253,19 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/events/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid event ID" });
+      const event = await storage.getEvent(id);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      res.json(event);
+    } catch (error) {
+      console.error("Error fetching event:", error);
+      res.status(500).json({ message: "Failed to fetch event" });
+    }
+  });
+
   app.post("/api/events", async (req, res) => {
     try {
       const parsed = insertEventSchema.safeParse(req.body);
@@ -249,6 +309,10 @@ export async function registerRoutes(
       if (!parsed.success) return res.status(400).json({ message: "Invalid enquiry data", errors: parsed.error.errors });
       const enquiry = await storage.createEnquiry(parsed.data);
       res.status(201).json(enquiry);
+
+      tryAppendToSheet("google_sheet_enquiries", [
+        [parsed.data.name, parsed.data.email, parsed.data.message || "", new Date().toISOString()],
+      ]);
     } catch (error) {
       console.error("Error creating enquiry:", error);
       res.status(500).json({ message: "Failed to submit enquiry" });
@@ -369,6 +433,10 @@ export async function registerRoutes(
       if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
       const donation = await storage.createDonation(parsed.data);
       res.status(201).json(donation);
+
+      tryAppendToSheet("google_sheet_donations", [
+        [parsed.data.name, parsed.data.email, parsed.data.amount, parsed.data.message || "", new Date().toISOString()],
+      ]);
     } catch (error) {
       console.error("Error creating donation:", error);
       res.status(500).json({ message: "Failed to submit donation" });

@@ -100,3 +100,11 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Added site_settings table, admin dashboard, image upload, settings CRUD, wired all public pages to settings: Feb 7, 2026
 - Added integrations admin page, media player, AI chat endpoint, donation page, media_items/donations tables: Feb 7, 2026
 - Added CSV import/export for artists, configurable hamburger menu visibility (toggle settings in admin Navigation section): Feb 7, 2026
+- Expanded artist schema: origin, members, bio, website, imageUrl2, songLink1/2, videoLink1/2, customLink1-5, visibleFields JSON: Feb 7, 2026
+- Expanded event schema: time, endDate, endTime, address, googleMapsUrl, ticketUrl, visibleFields JSON: Feb 7, 2026
+- Added per-field visibility toggles (eye icons) in admin artist/event editors: Feb 7, 2026
+- Added event detail page (/events/:id) with Google Maps embed, times, ticket link: Feb 7, 2026
+- Updated artist detail page to show all new fields (bio, origin, members badges, links) with visibility controls: Feb 7, 2026
+- Google Sheets integration: enquiry/donation submissions append to user-configured sheets, settings in integrations admin: Feb 7, 2026
+- CSV export/import updated to handle all new artist fields with flexible column matching: Feb 7, 2026
+- Members field uses comma-separated string, rendered as Badge tags with add/remove controls: Feb 7, 2026
