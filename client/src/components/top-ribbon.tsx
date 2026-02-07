@@ -7,6 +7,20 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSettings } from "@/hooks/use-settings";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 
+const MENU_ITEMS = [
+  { key: "home", href: "/", settingKey: "menu_show_home", labelKey: "nav_home_label", defaultLabel: "Home" },
+  { key: "artists", href: "/artists", settingKey: "menu_show_artists", labelKey: "nav_artists_label", defaultLabel: "Artists" },
+  { key: "events", href: "/events", settingKey: "menu_show_events", labelKey: "nav_events_label", defaultLabel: "Events" },
+  { key: "ds", href: "/ds", settingKey: "menu_show_ds", labelKey: "nav_ds_label", defaultLabel: "DS" },
+  { key: "profile", href: "/profile", settingKey: "menu_show_profile", labelKey: "nav_profile_label", defaultLabel: "Profile" },
+  { key: "donate", href: "/donate", settingKey: "menu_show_donate", defaultLabel: "Donate" },
+];
+
+const ADMIN_ITEMS = [
+  { key: "admin", href: "/admin", settingKey: "menu_show_admin", defaultLabel: "Admin" },
+  { key: "integrations", href: "/admin/integrations", settingKey: "menu_show_integrations", defaultLabel: "Integrations" },
+];
+
 export function TopRibbon() {
   const { user, isAuthenticated, logout } = useAuth();
   const { get } = useSettings();
@@ -14,6 +28,9 @@ export function TopRibbon() {
 
   const companyName = get("global_company_name", "[ Company Name ]");
   const logoImage = get("global_logo_image");
+
+  const visibleMenuItems = MENU_ITEMS.filter((item) => get(item.settingKey, "true") === "true");
+  const visibleAdminItems = ADMIN_ITEMS.filter((item) => get(item.settingKey, "true") === "true");
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -46,47 +63,25 @@ export function TopRibbon() {
             </SheetTrigger>
             <SheetContent side="right" className="w-64">
               <nav className="flex flex-col gap-2 mt-8">
-                <Link href="/" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start" data-testid="menu-home">
-                    Home
-                  </Button>
-                </Link>
-                <Link href="/artists" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start" data-testid="menu-artists">
-                    Artists
-                  </Button>
-                </Link>
-                <Link href="/events" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start" data-testid="menu-events">
-                    Events
-                  </Button>
-                </Link>
-                <Link href="/ds" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start" data-testid="menu-ds">
-                    DS
-                  </Button>
-                </Link>
-                <Link href="/profile" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start" data-testid="menu-profile">
-                    Profile
-                  </Button>
-                </Link>
-                <Link href="/donate" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start" data-testid="menu-donate">
-                    Donate
-                  </Button>
-                </Link>
-                <div className="border-t my-2" />
-                <Link href="/admin" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start" data-testid="menu-admin">
-                    Admin
-                  </Button>
-                </Link>
-                <Link href="/admin/integrations" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" className="w-full justify-start" data-testid="menu-integrations">
-                    Integrations
-                  </Button>
-                </Link>
+                {visibleMenuItems.map((item) => (
+                  <Link key={item.key} href={item.href} onClick={() => setOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start" data-testid={`menu-${item.key}`}>
+                      {item.labelKey ? get(item.labelKey, item.defaultLabel) : item.defaultLabel}
+                    </Button>
+                  </Link>
+                ))}
+                {visibleAdminItems.length > 0 && (
+                  <>
+                    <div className="border-t my-2" />
+                    {visibleAdminItems.map((item) => (
+                      <Link key={item.key} href={item.href} onClick={() => setOpen(false)}>
+                        <Button variant="ghost" className="w-full justify-start" data-testid={`menu-${item.key}`}>
+                          {item.defaultLabel}
+                        </Button>
+                      </Link>
+                    ))}
+                  </>
+                )}
                 {isAuthenticated && (
                   <>
                     <div className="border-t my-2" />

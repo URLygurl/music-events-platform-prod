@@ -43,6 +43,8 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - `POST /api/artists` — Create artist
 - `PATCH /api/artists/:id` — Update artist
 - `DELETE /api/artists/:id` — Delete artist
+- `GET /api/artists/export/csv` — Export all artists as CSV
+- `POST /api/artists/import/csv` — Import artists from CSV file (multipart upload)
 - `GET /api/events` — List all events
 - `POST /api/events` — Create event
 - `PATCH /api/events/:id` — Update event
@@ -66,8 +68,10 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 ## Admin Dashboard
 - 10 sections: Global Branding, Style Guide, Login Page, Landing Page, Manage Artists, Manage Events, Artists Directory, Events Page, DS Page, Navigation
 - Tab-based navigation between sections + Previous/Next buttons
-- Settings sections: text inputs, color pickers, font selectors, image uploads
-- Artists/Events sections: full inline editing with add/save/delete per item
+- Settings sections: text inputs, color pickers, font selectors, image uploads, toggle switches
+- Artists section: inline editing with add/save/delete + CSV import/export card
+- Events section: full inline editing with add/save/delete
+- Navigation section: button labels + menu item visibility toggles (menu_show_*)
 - Changes saved per section, reflected immediately on public pages
 
 ## Settings Hook
@@ -95,3 +99,4 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Initial build: Feb 7, 2026
 - Added site_settings table, admin dashboard, image upload, settings CRUD, wired all public pages to settings: Feb 7, 2026
 - Added integrations admin page, media player, AI chat endpoint, donation page, media_items/donations tables: Feb 7, 2026
+- Added CSV import/export for artists, configurable hamburger menu visibility (toggle settings in admin Navigation section): Feb 7, 2026

@@ -20,6 +20,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Upload,
+  Download,
+  FileSpreadsheet,
   Trash2,
   Plus,
   Check,
@@ -34,6 +36,7 @@ import {
   Users,
   X,
   Plug,
+  Menu,
 } from "lucide-react";
 import { Link } from "wouter";
 import type { SiteSetting, Artist, Event } from "@shared/schema";
@@ -189,6 +192,18 @@ function SettingsSection({
         }
         if (s.type === "font") {
           return <FontField key={s.key} label={s.label} value={val} onChange={(v) => setLocal(s.key, v)} />;
+        }
+        if (s.type === "toggle") {
+          return (
+            <div key={s.key} className="flex items-center justify-between gap-2 py-1">
+              <Label className="text-xs font-medium">{s.label}</Label>
+              <Switch
+                checked={val === "true"}
+                onCheckedChange={(checked) => setLocal(s.key, checked ? "true" : "false")}
+                data-testid={`switch-setting-${s.key}`}
+              />
+            </div>
+          );
         }
         return (
           <div key={s.key} className="space-y-2">
@@ -534,6 +549,54 @@ export default function AdminPage() {
 
           {currentSection.id === "artists" ? (
             <div className="space-y-4">
+              <Card className="p-4 overflow-visible">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileSpreadsheet className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="text-sm font-medium">Import / Export CSV</h3>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Export your artist directory as a CSV file, or import artists from a Google Sheets CSV export.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <a href="/api/artists/export/csv" download>
+                    <Button size="sm" variant="outline" data-testid="button-export-csv">
+                      <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
+                    </Button>
+                  </a>
+                  <label>
+                    <Button size="sm" variant="outline" asChild data-testid="button-import-csv">
+                      <span>
+                        <Upload className="w-3.5 h-3.5 mr-1" /> Import CSV
+                      </span>
+                    </Button>
+                    <input
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        try {
+                          const res = await fetch("/api/artists/import/csv", { method: "POST", body: formData });
+                          const data = await res.json();
+                          if (res.ok) {
+                            queryClient.invalidateQueries({ queryKey: ["/api/artists"] });
+                            toast({ title: "Import Complete", description: data.message });
+                          } else {
+                            toast({ title: "Import Failed", description: data.message, variant: "destructive" });
+                          }
+                        } catch {
+                          toast({ title: "Error", description: "Import failed.", variant: "destructive" });
+                        }
+                        e.target.value = "";
+                      }}
+                      data-testid="input-csv-file"
+                    />
+                  </label>
+                </div>
+              </Card>
               {loadingArtists ? (
                 <Skeleton className="h-40 w-full" />
               ) : (

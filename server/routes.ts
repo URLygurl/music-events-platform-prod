@@ -6,6 +6,7 @@ import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import Papa from "papaparse";
 
 const uploadsDir = path.join(process.cwd(), "client", "public", "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -51,6 +52,18 @@ const upload = multer({
   },
 });
 
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === "text/csv" || file.originalname.endsWith(".csv")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only CSV files are allowed"));
+    }
+  },
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -65,6 +78,71 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching artists:", error);
       res.status(500).json({ message: "Failed to fetch artists" });
+    }
+  });
+
+  app.get("/api/artists/export/csv", async (_req, res) => {
+    try {
+      const allArtists = await storage.getArtists();
+      const csvData = allArtists.map((a) => ({
+        name: a.name,
+        genre: a.genre,
+        description: a.description,
+        email: a.email || "",
+        phone: a.phone || "",
+        socialLinks: a.socialLinks || "",
+        timeSlot: a.timeSlot || "",
+        featured: a.featured ? "true" : "false",
+        imageUrl: a.imageUrl || "",
+        promoterImageUrl: a.promoterImageUrl || "",
+      }));
+      const csv = Papa.unparse(csvData);
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=artists.csv");
+      res.send(csv);
+    } catch (error) {
+      console.error("Error exporting artists:", error);
+      res.status(500).json({ message: "Failed to export artists" });
+    }
+  });
+
+  app.post("/api/artists/import/csv", csvUpload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const csvText = req.file.buffer.toString("utf-8");
+      const parsed = Papa.parse<Record<string, string>>(csvText, { header: true, skipEmptyLines: true });
+      if (parsed.errors.length > 0) {
+        return res.status(400).json({ message: "CSV parsing errors", errors: parsed.errors.slice(0, 5) });
+      }
+      const rows = parsed.data;
+      if (rows.length === 0) {
+        return res.status(400).json({ message: "CSV file is empty" });
+      }
+      let imported = 0;
+      let skipped = 0;
+      for (const row of rows) {
+        const name = (row.name || row.Name || "").trim();
+        const genre = (row.genre || row.Genre || "").trim();
+        const description = (row.description || row.Description || "").trim();
+        if (!name) { skipped++; continue; }
+        await storage.createArtist({
+          name,
+          genre: genre || "Uncategorized",
+          description: description || "",
+          imageUrl: (row.imageUrl || row.image_url || row.ImageUrl || "").trim(),
+          email: (row.email || row.Email || "").trim() || null,
+          phone: (row.phone || row.Phone || "").trim() || null,
+          socialLinks: (row.socialLinks || row.social_links || row.SocialLinks || "").trim() || null,
+          timeSlot: (row.timeSlot || row.time_slot || row.TimeSlot || "").trim() || null,
+          featured: ["true", "yes", "1"].includes((row.featured || row.Featured || "").trim().toLowerCase()),
+          promoterImageUrl: (row.promoterImageUrl || row.promoter_image_url || "").trim() || null,
+        });
+        imported++;
+      }
+      res.json({ message: `Imported ${imported} artists${skipped > 0 ? `, skipped ${skipped} rows (missing name)` : ""}`, imported, skipped });
+    } catch (error) {
+      console.error("Error importing artists:", error);
+      res.status(500).json({ message: "Failed to import artists" });
     }
   });
 

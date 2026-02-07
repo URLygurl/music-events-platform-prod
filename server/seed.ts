@@ -26,6 +26,14 @@ export async function seedDatabase() {
   if (!existingSettings || Number(existingSettings.count) === 0) {
     console.log("Seeding default settings...");
     await db.insert(siteSettings).values([
+      { key: "menu_show_home", value: "true", type: "toggle", section: "navigation", label: "Show Home in Menu" },
+      { key: "menu_show_artists", value: "true", type: "toggle", section: "navigation", label: "Show Artists in Menu" },
+      { key: "menu_show_events", value: "true", type: "toggle", section: "navigation", label: "Show Events in Menu" },
+      { key: "menu_show_ds", value: "true", type: "toggle", section: "navigation", label: "Show DS in Menu" },
+      { key: "menu_show_profile", value: "true", type: "toggle", section: "navigation", label: "Show Profile in Menu" },
+      { key: "menu_show_donate", value: "true", type: "toggle", section: "navigation", label: "Show Donate in Menu" },
+      { key: "menu_show_admin", value: "true", type: "toggle", section: "navigation", label: "Show Admin in Menu" },
+      { key: "menu_show_integrations", value: "true", type: "toggle", section: "navigation", label: "Show Integrations in Menu" },
       { key: "global_company_name", value: "[ Company Name ]", type: "text", section: "global", label: "Company Name" },
       { key: "global_logo_image", value: "", type: "image", section: "global", label: "Logo / Header Image" },
       { key: "global_primary_color", value: "#000000", type: "color", section: "style", label: "Primary Color" },
@@ -51,6 +59,20 @@ export async function seedDatabase() {
       { key: "nav_ds_label", value: "DS", type: "text", section: "navigation", label: "DS Button Label" },
       { key: "nav_profile_label", value: "Profile", type: "text", section: "navigation", label: "Profile Button Label" },
     ]);
+  }
+
+  const requiredSettings = [
+    { key: "menu_show_home", value: "true", type: "toggle", section: "navigation", label: "Show Home in Menu" },
+    { key: "menu_show_artists", value: "true", type: "toggle", section: "navigation", label: "Show Artists in Menu" },
+    { key: "menu_show_events", value: "true", type: "toggle", section: "navigation", label: "Show Events in Menu" },
+    { key: "menu_show_ds", value: "true", type: "toggle", section: "navigation", label: "Show DS in Menu" },
+    { key: "menu_show_profile", value: "true", type: "toggle", section: "navigation", label: "Show Profile in Menu" },
+    { key: "menu_show_donate", value: "true", type: "toggle", section: "navigation", label: "Show Donate in Menu" },
+    { key: "menu_show_admin", value: "true", type: "toggle", section: "navigation", label: "Show Admin in Menu" },
+    { key: "menu_show_integrations", value: "true", type: "toggle", section: "navigation", label: "Show Integrations in Menu" },
+  ];
+  for (const s of requiredSettings) {
+    await db.insert(siteSettings).values(s).onConflictDoNothing({ target: siteSettings.key });
   }
 
   console.log("Seeding complete.");
