@@ -1,4 +1,4 @@
-import { Menu } from "lucide-react";
+import { Menu, LogIn } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -84,7 +84,7 @@ export function TopRibbon() {
                     ))}
                   </>
                 )}
-                {isAuthenticated && (
+                {isAuthenticated ? (
                   <>
                     <div className="border-t my-2" />
                     <div className="px-3 py-1">
@@ -100,6 +100,16 @@ export function TopRibbon() {
                     >
                       Log out
                     </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="border-t my-2" />
+                    <a href="/api/login" onClick={() => setOpen(false)}>
+                      <Button variant="ghost" className="w-full justify-start" data-testid="button-login">
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Log In
+                      </Button>
+                    </a>
                   </>
                 )}
               </nav>

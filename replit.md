@@ -68,6 +68,8 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - `POST /api/ds-clients` — Create DS client
 - `PATCH /api/ds-clients/:id` — Update DS client
 - `DELETE /api/ds-clients/:id` — Delete DS client
+- `GET /api/users` — List all users (admin only)
+- `PATCH /api/users/:id/role` — Update user role (admin only)
 - `POST /api/ai/chat` — AI chat proxy (OpenAI/Anthropic, BYOK)
 - `GET /api/auth/user` — Current authenticated user
 - `GET /api/login` — Begin SSO login
@@ -84,6 +86,7 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Artists section: inline editing with add/save/delete + CSV import/export card
 - Events section: full inline editing with add/save/delete
 - Navigation section: button labels + menu item visibility toggles (menu_show_*)
+- User Roles section: list all users, toggle admin role on/off per user (cannot demote yourself)
 - Changes saved per section, reflected immediately on public pages
 
 ## Components

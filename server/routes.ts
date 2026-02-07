@@ -532,6 +532,35 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/users", isAdmin, async (_req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      res.json(allUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.patch("/api/users/:id/role", isAdmin, async (req: any, res) => {
+    try {
+      const { role } = req.body;
+      if (!role || !["user", "admin"].includes(role)) {
+        return res.status(400).json({ message: "Role must be 'user' or 'admin'" });
+      }
+      const currentUserId = req.user?.claims?.sub;
+      if (currentUserId && currentUserId === req.params.id) {
+        return res.status(403).json({ message: "You cannot change your own role" });
+      }
+      const updated = await storage.updateUserRole(req.params.id, role);
+      if (!updated) return res.status(404).json({ message: "User not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
   app.post("/api/ai/chat", isAdmin, async (req, res) => {
     try {
       const { message, provider, apiKey } = req.body;

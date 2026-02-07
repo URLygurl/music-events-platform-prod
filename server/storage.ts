@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import {
   artists, events, enquiries, siteSettings, mediaItems, donations, dsClients,
+  users,
   type Artist, type InsertArtist,
   type Event, type InsertEvent,
   type Enquiry, type InsertEnquiry,
@@ -9,6 +10,7 @@ import {
   type MediaItem, type InsertMediaItem,
   type Donation, type InsertDonation,
   type DsClient, type InsertDsClient,
+  type User,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -40,6 +42,8 @@ export interface IStorage {
   createDsClient(client: InsertDsClient): Promise<DsClient>;
   updateDsClient(id: number, data: Partial<InsertDsClient>): Promise<DsClient | undefined>;
   deleteDsClient(id: number): Promise<void>;
+  getAllUsers(): Promise<User[]>;
+  updateUserRole(id: string, role: string): Promise<User | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -178,6 +182,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDsClient(id: number): Promise<void> {
     await db.delete(dsClients).where(eq(dsClients.id, id));
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users);
+  }
+
+  async updateUserRole(id: string, role: string): Promise<User | undefined> {
+    const [updated] = await db.update(users).set({ role }).where(eq(users.id, id)).returning();
+    return updated;
   }
 }
 

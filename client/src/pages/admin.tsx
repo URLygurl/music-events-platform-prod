@@ -45,10 +45,12 @@ import {
   Share2,
   Sparkles,
   Type,
+  Shield,
+  ShieldCheck,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import type { SiteSetting, Artist, Event, DsClient } from "@shared/schema";
+import type { SiteSetting, Artist, Event, DsClient, User } from "@shared/schema";
 import { ARTIST_FIELD_LABELS, EVENT_FIELD_LABELS, DS_CLIENT_FIELD_LABELS, DEFAULT_ARTIST_VISIBILITY, DEFAULT_EVENT_VISIBILITY, DEFAULT_DS_CLIENT_VISIBILITY, getVisibleFields } from "@shared/schema";
 
 const FONT_OPTIONS = [
@@ -72,6 +74,7 @@ const SECTIONS = [
   { id: "events_page", label: "Events Page", icon: CalendarDays },
   { id: "ds", label: "DS Page", icon: LayoutGrid },
   { id: "navigation", label: "Navigation", icon: Navigation },
+  { id: "users", label: "User Roles", icon: ShieldCheck },
 ] as const;
 
 function ImageUploadField({
@@ -874,6 +877,24 @@ export default function AdminPage() {
     },
   });
 
+  const { data: usersList, isLoading: loadingUsers } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+    enabled: isAdmin,
+  });
+
+  const roleMutation = useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: string }) => {
+      await apiRequest("PATCH", `/api/users/${id}/role`, { role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: "Updated", description: "User role updated." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update role.", variant: "destructive" });
+    },
+  });
+
   const setLocal = (key: string, val: string) => {
     setLocalValues((prev) => ({ ...prev, [key]: val }));
   };
@@ -1126,6 +1147,70 @@ export default function AdminPage() {
               >
                 <Plus className="w-4 h-4 mr-2" /> Add Client Profile
               </Button>
+            </div>
+          ) : currentSection.id === "users" ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Manage who has admin access. Admins can edit content, manage artists, events, and all settings.
+              </p>
+              {loadingUsers ? (
+                <Skeleton className="h-40 w-full" />
+              ) : usersList && usersList.length > 0 ? (
+                <div className="space-y-2">
+                  {usersList.map((u) => (
+                    <Card key={u.id} className="p-4 overflow-visible">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {u.profileImageUrl ? (
+                            <img src={u.profileImageUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                              <Users className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate" data-testid={`text-user-name-${u.id}`}>
+                              {u.firstName} {u.lastName}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate" data-testid={`text-user-email-${u.id}`}>
+                              {u.email || "No email"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {u.role === "admin" ? (
+                            <Badge variant="default" className="text-xs gap-1">
+                              <ShieldCheck className="w-3 h-3" /> Admin
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs gap-1">
+                              <Shield className="w-3 h-3" /> User
+                            </Badge>
+                          )}
+                          {u.id !== user?.id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => roleMutation.mutate({
+                                id: u.id,
+                                role: u.role === "admin" ? "user" : "admin",
+                              })}
+                              disabled={roleMutation.isPending}
+                              data-testid={`button-toggle-role-${u.id}`}
+                            >
+                              {u.role === "admin" ? "Remove Admin" : "Make Admin"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-6 text-center overflow-visible">
+                  <p className="text-sm text-muted-foreground">No users have logged in yet.</p>
+                </Card>
+              )}
             </div>
           ) : (
             <>
