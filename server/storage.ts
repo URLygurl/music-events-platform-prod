@@ -1,38 +1,60 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { eq } from "drizzle-orm";
+import { db } from "./db";
+import {
+  artists, events, enquiries,
+  type Artist, type InsertArtist,
+  type Event, type InsertEvent,
+  type Enquiry, type InsertEnquiry,
+} from "@shared/schema";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getArtists(): Promise<Artist[]>;
+  getArtist(id: number): Promise<Artist | undefined>;
+  createArtist(artist: InsertArtist): Promise<Artist>;
+  getEvents(): Promise<Event[]>;
+  getEvent(id: number): Promise<Event | undefined>;
+  createEvent(event: InsertEvent): Promise<Event>;
+  getEnquiries(): Promise<Enquiry[]>;
+  createEnquiry(enquiry: InsertEnquiry): Promise<Enquiry>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getArtists(): Promise<Artist[]> {
+    return db.select().from(artists);
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getArtist(id: number): Promise<Artist | undefined> {
+    const [artist] = await db.select().from(artists).where(eq(artists.id, id));
+    return artist;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createArtist(artist: InsertArtist): Promise<Artist> {
+    const [created] = await db.insert(artists).values(artist).returning();
+    return created;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getEvents(): Promise<Event[]> {
+    return db.select().from(events);
+  }
+
+  async getEvent(id: number): Promise<Event | undefined> {
+    const [event] = await db.select().from(events).where(eq(events.id, id));
+    return event;
+  }
+
+  async createEvent(event: InsertEvent): Promise<Event> {
+    const [created] = await db.insert(events).values(event).returning();
+    return created;
+  }
+
+  async getEnquiries(): Promise<Enquiry[]> {
+    return db.select().from(enquiries);
+  }
+
+  async createEnquiry(enquiry: InsertEnquiry): Promise<Enquiry> {
+    const [created] = await db.insert(enquiries).values(enquiry).returning();
+    return created;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
