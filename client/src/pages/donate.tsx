@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Link } from "wouter";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,9 +89,9 @@ export default function DonatePage() {
               {!user ? "Please log in with an admin account." : "You do not have admin access."}
             </p>
             {!user && (
-              <a href="/api/login">
+              <Link href="/login">
                 <Button data-testid="button-donate-login">Log In</Button>
-              </a>
+              </Link>
             )}
           </Card>
         </div>

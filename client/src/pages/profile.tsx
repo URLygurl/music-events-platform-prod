@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LogOut, User } from "lucide-react";
+import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProfilePage() {
@@ -32,9 +33,9 @@ export default function ProfilePage() {
               {!user ? "Please log in with an admin account." : "You do not have admin access."}
             </p>
             {!user && (
-              <a href="/api/login">
+              <Link href="/login">
                 <Button data-testid="button-sign-in">Log In</Button>
-              </a>
+              </Link>
             )}
           </Card>
         </div>

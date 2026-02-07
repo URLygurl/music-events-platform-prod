@@ -1,10 +1,12 @@
 import { useLocation, Link } from "wouter";
-import { Home, Music, CalendarDays, LayoutGrid } from "lucide-react";
+import { Home, Music, CalendarDays, LayoutGrid, LogIn } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
+import { useAuth } from "@/hooks/use-auth";
 
 export function BottomNav() {
   const [location] = useLocation();
   const { get } = useSettings();
+  const { isAuthenticated, isLoading } = useAuth();
 
   const navItems = [
     { label: get("nav_home_label", "Home"), icon: Home, path: "/" },
@@ -40,6 +42,21 @@ export function BottomNav() {
             </Link>
           );
         })}
+        {!isLoading && !isAuthenticated && (
+          <Link href="/login">
+            <button
+              className={`flex flex-col items-center gap-1 px-3 py-2 text-xs transition-colors ${
+                location === "/login"
+                  ? "text-foreground font-medium"
+                  : "text-muted-foreground"
+              }`}
+              data-testid="nav-login"
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Log In</span>
+            </button>
+          </Link>
+        )}
       </div>
     </nav>
   );

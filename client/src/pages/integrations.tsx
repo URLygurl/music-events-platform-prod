@@ -487,9 +487,9 @@ export default function IntegrationsPage() {
             {!user ? "Please log in with an admin account." : "You do not have admin access."}
           </p>
           {!user && (
-            <a href="/api/login">
+            <Link href="/login">
               <Button data-testid="button-integrations-login">Log In</Button>
-            </a>
+            </Link>
           )}
         </Card>
       </div>

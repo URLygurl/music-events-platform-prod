@@ -104,12 +104,12 @@ export function TopRibbon() {
                 ) : (
                   <>
                     <div className="border-t my-2" />
-                    <a href="/api/login" onClick={() => setOpen(false)}>
+                    <Link href="/login" onClick={() => setOpen(false)}>
                       <Button variant="ghost" className="w-full justify-start" data-testid="button-login">
                         <LogIn className="w-4 h-4 mr-2" />
                         Log In
                       </Button>
-                    </a>
+                    </Link>
                   </>
                 )}
               </nav>
