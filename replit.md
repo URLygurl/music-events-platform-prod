@@ -110,15 +110,22 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Mobile-first layout (max-w-lg centered)
 
 ## User Preferences
-- Auth temporarily disabled during development
 - Admin dashboard should be intuitive enough for non-technical users
+
+## Roles & Auth
+- **Users table** has a `role` column: `"user"` (default) or `"admin"`
+- **Standard users**: Can browse all public pages (landing, artists, events, DS), use forms (enquiry/donation submissions), play media, share links — no login required
+- **Admin users**: Can access Profile, Donate, Admin Dashboard, Integrations, and all CRUD operations
+- **Hidden from non-admins**: Profile page, Donate page, Admin Dashboard, Integrations — removed from bottom nav and hamburger menu
+- To make someone an admin: `UPDATE users SET role = 'admin' WHERE email = 'their@email.com'`
 
 ## Security Notes
 - Media embed URLs validated against allow-list (YouTube, Bandcamp, SoundCloud, Spotify)
 - Media PATCH endpoint sanitizes input fields (only title, url, type, embedUrl, order allowed)
-- All admin/mutating API routes protected with `isAuthenticated` middleware (POST/PATCH/DELETE artists, events, media, ds-clients; PUT settings; uploads; CSV import/export; AI chat; GET enquiries/donations)
+- All admin/mutating API routes protected with `isAdmin` middleware (POST/PATCH/DELETE artists, events, media, ds-clients; PUT settings; uploads; CSV import/export; AI chat; GET enquiries/donations)
 - Public read routes remain open: GET artists, events, settings, media, ds-clients; POST enquiries/donations (forms)
-- Frontend admin/integrations pages gated with useAuth hook — unauthenticated users see login prompt
+- Frontend admin pages gated with useAuth `isAdmin` check — non-admin users see access denied message
+- upsertUser intentionally skips `role` field to prevent role escalation via SSO login
 - AI endpoint proxies to OpenAI/Anthropic; user brings own API key stored in settings
 
 ## Recent Changes
@@ -144,3 +151,4 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Integrated social links + share button on landing page, share button on artist/event detail pages: Feb 7, 2026
 - Added ds_clients table with full artist-equivalent fields, CRUD API routes, admin editor with visibility toggles, and public DS page client profiles: Feb 7, 2026
 - Hardened authentication: added isAuthenticated middleware to all 15+ admin/mutating API routes, frontend auth guards on admin & integrations pages: Feb 7, 2026
+- Added role-based access control: users table has role column (user/admin), isAdmin middleware, admin-only routes, hidden nav items for non-admins, frontend guards on profile/donate/admin/integrations pages: Feb 7, 2026

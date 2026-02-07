@@ -425,7 +425,7 @@ function PaymentsSection({
 
 export default function IntegrationsPage() {
   const { toast } = useToast();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const [localValues, setLocalValues] = useState<Record<string, string>>({});
 
   const { data: allSettings, isLoading } = useQuery<SiteSetting[]>({
@@ -478,15 +478,19 @@ export default function IntegrationsPage() {
     );
   }
 
-  if (!user) {
+  if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="p-6 max-w-sm w-full text-center space-y-4">
           <h2 className="text-lg font-semibold">Admin Access Required</h2>
-          <p className="text-sm text-muted-foreground">Please log in to access integrations settings.</p>
-          <a href="/api/login">
-            <Button data-testid="button-integrations-login">Log In</Button>
-          </a>
+          <p className="text-sm text-muted-foreground">
+            {!user ? "Please log in with an admin account." : "You do not have admin access."}
+          </p>
+          {!user && (
+            <a href="/api/login">
+              <Button data-testid="button-integrations-login">Log In</Button>
+            </a>
+          )}
         </Card>
       </div>
     );

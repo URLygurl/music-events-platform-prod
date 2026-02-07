@@ -19,7 +19,9 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/hooks/use-settings";
+import { useAuth } from "@/hooks/use-auth";
 import { Heart, Check } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const donationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -33,6 +35,7 @@ type DonationFormValues = z.infer<typeof donationSchema>;
 export default function DonatePage() {
   const { toast } = useToast();
   const { get } = useSettings();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<string>("");
 
@@ -62,6 +65,38 @@ export default function DonatePage() {
     setSelectedAmount(amt);
     form.setValue("amount", amt);
   };
+
+  if (authLoading) {
+    return (
+      <AppLayout>
+        <div className="px-4 py-8 max-w-lg mx-auto space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <AppLayout>
+        <div className="px-4 py-12 flex items-center justify-center">
+          <Card className="p-6 max-w-sm w-full text-center space-y-4">
+            <Heart className="w-12 h-12 mx-auto text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Admin Access Required</h2>
+            <p className="text-sm text-muted-foreground">
+              {!user ? "Please log in with an admin account." : "You do not have admin access."}
+            </p>
+            {!user && (
+              <a href="/api/login">
+                <Button data-testid="button-donate-login">Log In</Button>
+              </a>
+            )}
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (submitted) {
     return (

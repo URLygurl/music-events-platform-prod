@@ -2,11 +2,12 @@ import { AppLayout } from "@/components/app-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { LogOut, User } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProfilePage() {
-  const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const { user, isLoading, isAdmin, logout } = useAuth();
 
   if (isLoading) {
     return (
@@ -20,15 +21,22 @@ export default function ProfilePage() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAdmin) {
     return (
       <AppLayout>
-        <div className="px-4 py-12 text-center space-y-4">
-          <User className="w-12 h-12 mx-auto text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Sign in to view your profile</p>
-          <Button onClick={() => { window.location.href = "/api/login"; }} data-testid="button-sign-in">
-            Sign in
-          </Button>
+        <div className="px-4 py-12 flex items-center justify-center">
+          <Card className="p-6 max-w-sm w-full text-center space-y-4">
+            <User className="w-12 h-12 mx-auto text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Admin Access Required</h2>
+            <p className="text-sm text-muted-foreground">
+              {!user ? "Please log in with an admin account." : "You do not have admin access."}
+            </p>
+            {!user && (
+              <a href="/api/login">
+                <Button data-testid="button-sign-in">Log In</Button>
+              </a>
+            )}
+          </Card>
         </div>
       </AppLayout>
     );

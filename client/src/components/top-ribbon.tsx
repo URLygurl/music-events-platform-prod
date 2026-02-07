@@ -7,30 +7,32 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSettings } from "@/hooks/use-settings";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 
-const MENU_ITEMS = [
+const PUBLIC_MENU_ITEMS = [
   { key: "home", href: "/", settingKey: "menu_show_home", labelKey: "nav_home_label", defaultLabel: "Home" },
   { key: "artists", href: "/artists", settingKey: "menu_show_artists", labelKey: "nav_artists_label", defaultLabel: "Artists" },
   { key: "events", href: "/events", settingKey: "menu_show_events", labelKey: "nav_events_label", defaultLabel: "Events" },
   { key: "ds", href: "/ds", settingKey: "menu_show_ds", labelKey: "nav_ds_label", defaultLabel: "DS" },
-  { key: "profile", href: "/profile", settingKey: "menu_show_profile", labelKey: "nav_profile_label", defaultLabel: "Profile" },
-  { key: "donate", href: "/donate", settingKey: "menu_show_donate", defaultLabel: "Donate" },
 ];
 
-const ADMIN_ITEMS = [
+const ADMIN_MENU_ITEMS = [
+  { key: "profile", href: "/profile", settingKey: "menu_show_profile", labelKey: "nav_profile_label", defaultLabel: "Profile" },
+  { key: "donate", href: "/donate", settingKey: "menu_show_donate", defaultLabel: "Donate" },
   { key: "admin", href: "/admin", settingKey: "menu_show_admin", defaultLabel: "Admin" },
   { key: "integrations", href: "/admin/integrations", settingKey: "menu_show_integrations", defaultLabel: "Integrations" },
 ];
 
 export function TopRibbon() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { get } = useSettings();
   const [open, setOpen] = useState(false);
 
   const companyName = get("global_company_name", "[ Company Name ]");
   const logoImage = get("global_logo_image");
 
-  const visibleMenuItems = MENU_ITEMS.filter((item) => get(item.settingKey, "true") === "true");
-  const visibleAdminItems = ADMIN_ITEMS.filter((item) => get(item.settingKey, "true") === "true");
+  const visiblePublicItems = PUBLIC_MENU_ITEMS.filter((item) => get(item.settingKey, "true") === "true");
+  const visibleAdminItems = isAdmin
+    ? ADMIN_MENU_ITEMS.filter((item) => get(item.settingKey, "true") === "true")
+    : [];
 
   return (
     <header className="sticky top-0 z-50 w-full shadow-md">
@@ -63,7 +65,7 @@ export function TopRibbon() {
             </SheetTrigger>
             <SheetContent side="right" className="w-64">
               <nav className="flex flex-col gap-2 mt-8">
-                {visibleMenuItems.map((item) => (
+                {visiblePublicItems.map((item) => (
                   <Link key={item.key} href={item.href} onClick={() => setOpen(false)}>
                     <Button variant="ghost" className="w-full justify-start" data-testid={`menu-${item.key}`}>
                       {item.labelKey ? get(item.labelKey, item.defaultLabel) : item.defaultLabel}
@@ -76,7 +78,7 @@ export function TopRibbon() {
                     {visibleAdminItems.map((item) => (
                       <Link key={item.key} href={item.href} onClick={() => setOpen(false)}>
                         <Button variant="ghost" className="w-full justify-start" data-testid={`menu-${item.key}`}>
-                          {item.defaultLabel}
+                          {item.labelKey ? get(item.labelKey, item.defaultLabel) : item.defaultLabel}
                         </Button>
                       </Link>
                     ))}

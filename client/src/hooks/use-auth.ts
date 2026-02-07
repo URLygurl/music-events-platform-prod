@@ -27,7 +27,7 @@ export function useAuth() {
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   const logoutMutation = useMutation({
@@ -41,6 +41,7 @@ export function useAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
+    isAdmin: user?.role === "admin",
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
   };
