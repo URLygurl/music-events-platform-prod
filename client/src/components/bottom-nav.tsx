@@ -42,9 +42,6 @@ export function BottomNav() {
           );
         })}
       </div>
-      <div className="text-center pb-1" data-testid="text-footer-credit">
-        <span className="text-muted-foreground" style={{ fontSize: '6px' }}>made with 🍑 by peachyweb</span>
-      </div>
     </nav>
   );
 }

@@ -25,9 +25,12 @@ export function AppLayout({ children, showTopRibbon = true, bgKey }: AppLayoutPr
       {bgImage && <div className="fixed inset-0 bg-background/80 z-0" />}
       <div className={`flex flex-col min-h-screen ${bgImage ? "relative z-10" : ""}`}>
         {showTopRibbon && <TopRibbon />}
-        <main className="flex-1 pb-20 max-w-lg mx-auto w-full">
+        <main className="flex-1 pb-24 max-w-lg mx-auto w-full">
           {children}
         </main>
+        <div className="fixed bottom-[68px] left-0 right-0 z-50 text-center pointer-events-none" data-testid="text-footer-credit">
+          <span className="text-muted-foreground" style={{ fontSize: '6px' }}>made with 🍑 by peachyweb</span>
+        </div>
         <BottomNav />
       </div>
     </div>
