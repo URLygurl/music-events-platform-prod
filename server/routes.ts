@@ -6,13 +6,7 @@ import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin }
 import { appendToSheet, isGoogleSheetsConnected } from "./google-sheets";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
 import Papa from "papaparse";
-
-const uploadsDir = path.join(process.cwd(), "client", "public", "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
 
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
 const FONT_MIMES = ["font/ttf", "font/otf", "font/woff", "font/woff2", "application/font-woff", "application/font-woff2", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream"];
@@ -34,25 +28,6 @@ function isValidEmbedUrl(url: string | undefined | null): boolean {
     return false;
   }
 }
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: uploadsDir,
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-      cb(null, name);
-    },
-  }),
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (ALLOWED_MIMES.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed"));
-    }
-  },
-});
 
 const csvUpload = multer({
   storage: multer.memoryStorage(),
@@ -93,7 +68,7 @@ export async function registerRoutes(
     try {
       const claims = req.user?.claims;
       if (!claims?.sub) return res.status(401).json({ message: "Not authenticated" });
-      const existingAdmins = await storage.getUsers();
+      const existingAdmins = await storage.getAllUsers();
       const hasSuperAdmin = existingAdmins.some((u: any) => u.role === "superadmin");
       if (hasSuperAdmin) {
         return res.status(403).json({ message: "Superadmin already exists" });
@@ -370,10 +345,28 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/upload", isAdmin, upload.single("file"), (req, res) => {
+  const memUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      if (ALLOWED_MIMES.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only image files are allowed"));
+      }
+    },
+  });
+
+  app.post("/api/upload", isAdmin, memUpload.single("file"), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-      const url = `/uploads/${req.file.filename}`;
+      const base64 = req.file.buffer.toString("base64");
+      const saved = await storage.createUploadedFile({
+        filename: req.file.originalname,
+        mimeType: req.file.mimetype,
+        data: base64,
+      });
+      const url = `/api/files/${saved.id}`;
       res.json({ url });
     } catch (error) {
       console.error("Error uploading file:", error);
@@ -381,15 +374,8 @@ export async function registerRoutes(
     }
   });
 
-  const fontUpload = multer({
-    storage: multer.diskStorage({
-      destination: uploadsDir,
-      filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        const name = `font-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-        cb(null, name);
-      },
-    }),
+  const fontMemUpload = multer({
+    storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase();
@@ -401,14 +387,39 @@ export async function registerRoutes(
     },
   });
 
-  app.post("/api/upload/font", isAdmin, fontUpload.single("file"), (req, res) => {
+  app.post("/api/upload/font", isAdmin, fontMemUpload.single("file"), async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-      const url = `/uploads/${req.file.filename}`;
+      const base64 = req.file.buffer.toString("base64");
+      const saved = await storage.createUploadedFile({
+        filename: req.file.originalname,
+        mimeType: req.file.mimetype,
+        data: base64,
+      });
+      const url = `/api/files/${saved.id}`;
       res.json({ url, filename: req.file.originalname });
     } catch (error) {
       console.error("Error uploading font:", error);
       res.status(500).json({ message: "Failed to upload font" });
+    }
+  });
+
+  app.get("/api/files/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid file ID" });
+      const file = await storage.getUploadedFile(id);
+      if (!file) return res.status(404).json({ message: "File not found" });
+      const buffer = Buffer.from(file.data, "base64");
+      res.set({
+        "Content-Type": file.mimeType,
+        "Content-Length": buffer.length.toString(),
+        "Cache-Control": "public, max-age=31536000, immutable",
+      });
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error serving file:", error);
+      res.status(500).json({ message: "Failed to serve file" });
     }
   });
 

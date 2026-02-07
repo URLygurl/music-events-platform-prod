@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import {
   artists, events, enquiries, siteSettings, mediaItems, donations, dsClients,
-  users,
+  users, uploadedFiles,
   type Artist, type InsertArtist,
   type Event, type InsertEvent,
   type Enquiry, type InsertEnquiry,
@@ -44,6 +44,8 @@ export interface IStorage {
   deleteDsClient(id: number): Promise<void>;
   getAllUsers(): Promise<User[]>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
+  createUploadedFile(file: { filename: string; mimeType: string; data: string }): Promise<{ id: number }>;
+  getUploadedFile(id: number): Promise<{ id: number; filename: string; mimeType: string; data: string } | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -191,6 +193,21 @@ export class DatabaseStorage implements IStorage {
   async updateUserRole(id: string, role: string): Promise<User | undefined> {
     const [updated] = await db.update(users).set({ role }).where(eq(users.id, id)).returning();
     return updated;
+  }
+
+  async createUploadedFile(file: { filename: string; mimeType: string; data: string }): Promise<{ id: number }> {
+    const [created] = await db.insert(uploadedFiles).values(file).returning({ id: uploadedFiles.id });
+    return created;
+  }
+
+  async getUploadedFile(id: number): Promise<{ id: number; filename: string; mimeType: string; data: string } | undefined> {
+    const [file] = await db.select({
+      id: uploadedFiles.id,
+      filename: uploadedFiles.filename,
+      mimeType: uploadedFiles.mimeType,
+      data: uploadedFiles.data,
+    }).from(uploadedFiles).where(eq(uploadedFiles.id, id));
+    return file;
   }
 }
 
