@@ -1,18 +1,48 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export * from "./models/auth";
+
+export const artists = pgTable("artists", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  genre: text("genre").notNull(),
+  description: text("description").notNull(),
+  imageUrl: text("image_url").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  socialLinks: text("social_links"),
+  timeSlot: text("time_slot"),
+  featured: boolean("featured").default(false),
+  promoterImageUrl: text("promoter_image_url"),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const events = pgTable("events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  date: text("date"),
+  venue: text("venue"),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export const enquiries = pgTable("enquiries", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  message: text("message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertArtistSchema = createInsertSchema(artists).omit({ id: true });
+export const insertEventSchema = createInsertSchema(events).omit({ id: true });
+export const insertEnquirySchema = createInsertSchema(enquiries).omit({ id: true, createdAt: true });
+
+export type Artist = typeof artists.$inferSelect;
+export type InsertArtist = z.infer<typeof insertArtistSchema>;
+export type Event = typeof events.$inferSelect;
+export type InsertEvent = z.infer<typeof insertEventSchema>;
+export type Enquiry = typeof enquiries.$inferSelect;
+export type InsertEnquiry = z.infer<typeof insertEnquirySchema>;
