@@ -28,6 +28,17 @@ class AuthStorage implements IAuthStorage {
         },
       })
       .returning();
+
+    const hasSuperAdmin = await db.select().from(users).where(eq(users.role, "superadmin"));
+    if (hasSuperAdmin.length === 0) {
+      const [promoted] = await db
+        .update(users)
+        .set({ role: "superadmin" })
+        .where(eq(users.id, user.id))
+        .returning();
+      return promoted;
+    }
+
     return user;
   }
 }
