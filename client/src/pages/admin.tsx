@@ -33,7 +33,9 @@ import {
   Navigation,
   Users,
   X,
+  Plug,
 } from "lucide-react";
+import { Link } from "wouter";
 import type { SiteSetting, Artist, Event } from "@shared/schema";
 
 const FONT_OPTIONS = [
@@ -488,9 +490,16 @@ export default function AdminPage() {
       <div className="sticky top-0 z-50 border-b bg-background px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between gap-2">
           <h1 className="text-sm font-semibold">Admin Dashboard</h1>
-          <span className="text-xs text-muted-foreground">
-            {step + 1} / {SECTIONS.length}
-          </span>
+          <div className="flex items-center gap-2">
+            <Link href="/admin/integrations">
+              <Button size="sm" variant="outline" data-testid="button-integrations">
+                <Plug className="w-3.5 h-3.5 mr-1" /> Integrations
+              </Button>
+            </Link>
+            <span className="text-xs text-muted-foreground">
+              {step + 1} / {SECTIONS.length}
+            </span>
+          </div>
         </div>
       </div>
 

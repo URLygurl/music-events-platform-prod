@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import {
-  artists, events, enquiries, siteSettings,
+  artists, events, enquiries, siteSettings, mediaItems, donations,
   type Artist, type InsertArtist,
   type Event, type InsertEvent,
   type Enquiry, type InsertEnquiry,
   type SiteSetting, type InsertSiteSetting,
+  type MediaItem, type InsertMediaItem,
+  type Donation, type InsertDonation,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -25,6 +27,13 @@ export interface IStorage {
   getSetting(key: string): Promise<SiteSetting | undefined>;
   upsertSetting(setting: InsertSiteSetting): Promise<SiteSetting>;
   upsertManySettings(settings: InsertSiteSetting[]): Promise<void>;
+  getMediaItems(): Promise<MediaItem[]>;
+  getMediaItem(id: number): Promise<MediaItem | undefined>;
+  createMediaItem(item: InsertMediaItem): Promise<MediaItem>;
+  updateMediaItem(id: number, data: Partial<InsertMediaItem>): Promise<MediaItem | undefined>;
+  deleteMediaItem(id: number): Promise<void>;
+  getDonations(): Promise<Donation[]>;
+  createDonation(donation: InsertDonation): Promise<Donation>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -108,6 +117,38 @@ export class DatabaseStorage implements IStorage {
     for (const setting of settings) {
       await this.upsertSetting(setting);
     }
+  }
+
+  async getMediaItems(): Promise<MediaItem[]> {
+    return db.select().from(mediaItems);
+  }
+
+  async getMediaItem(id: number): Promise<MediaItem | undefined> {
+    const [item] = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    return item;
+  }
+
+  async createMediaItem(item: InsertMediaItem): Promise<MediaItem> {
+    const [created] = await db.insert(mediaItems).values(item).returning();
+    return created;
+  }
+
+  async updateMediaItem(id: number, data: Partial<InsertMediaItem>): Promise<MediaItem | undefined> {
+    const [updated] = await db.update(mediaItems).set(data).where(eq(mediaItems.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMediaItem(id: number): Promise<void> {
+    await db.delete(mediaItems).where(eq(mediaItems.id, id));
+  }
+
+  async getDonations(): Promise<Donation[]> {
+    return db.select().from(donations);
+  }
+
+  async createDonation(donation: InsertDonation): Promise<Donation> {
+    const [created] = await db.insert(donations).values(donation).returning();
+    return created;
   }
 }
 

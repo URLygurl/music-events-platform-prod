@@ -71,9 +71,20 @@ export function TopRibbon() {
                     Profile
                   </Button>
                 </Link>
+                <Link href="/donate" onClick={() => setOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start" data-testid="menu-donate">
+                    Donate
+                  </Button>
+                </Link>
+                <div className="border-t my-2" />
                 <Link href="/admin" onClick={() => setOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start" data-testid="menu-admin">
                     Admin
+                  </Button>
+                </Link>
+                <Link href="/admin/integrations" onClick={() => setOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start" data-testid="menu-integrations">
+                    Integrations
                   </Button>
                 </Link>
                 {isAuthenticated && (

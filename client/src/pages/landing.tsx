@@ -6,6 +6,7 @@ import { ArtistTile } from "@/components/artist-tile";
 import { EnquiryForm } from "@/components/enquiry-form";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MediaPlayer } from "@/components/media-player";
 import { useSettings } from "@/hooks/use-settings";
 import type { Artist, Event } from "@shared/schema";
 
@@ -70,6 +71,10 @@ export default function LandingPage() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="px-4 pb-8">
+        <MediaPlayer />
       </div>
 
       <div className="px-4 pb-8">

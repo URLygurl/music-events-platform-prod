@@ -12,6 +12,8 @@ import EventsPage from "@/pages/events";
 import DSPage from "@/pages/ds";
 import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin";
+import IntegrationsPage from "@/pages/integrations";
+import DonatePage from "@/pages/donate";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,10 +22,12 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/admin/integrations" component={IntegrationsPage} />
       <Route path="/artists/:id" component={ArtistDetailPage} />
       <Route path="/artists" component={ArtistsDirectoryPage} />
       <Route path="/events" component={EventsPage} />
       <Route path="/ds" component={DSPage} />
+      <Route path="/donate" component={DonatePage} />
       <Route path="/profile" component={ProfilePage} />
       <Route component={NotFound} />
     </Switch>

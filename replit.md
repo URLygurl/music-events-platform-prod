@@ -13,24 +13,28 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 
 ## Key Pages
 1. **Login** — SSO login page with provider button (reads welcome text, subtitle, header image from settings)
-2. **Landing** — Event name, search, 2x2 artist tile grid, enquiry form, banner (reads heading, search placeholder, banner image, enquiry title from settings)
+2. **Landing** — Event name, search, 2x2 artist tile grid, media player, enquiry form, banner (reads heading, search placeholder, banner image, enquiry title from settings)
 3. **Artist Detail** — Hero image, description, contact info, promoter image
 4. **Artists Directory** — List view with search/filter (reads page title from settings)
 5. **Events** — Card-based event listing (reads page title from settings)
 6. **DS** — Customizable content page (reads title, content text, image from settings)
 7. **Profile** — User profile with logout
-8. **Admin** — Dashboard with 10 walkthrough sections for customizing all content
+8. **Admin** — Dashboard with 10 walkthrough sections for customizing all content + Integrations button
+9. **Integrations** (/admin/integrations) — Toggle cards for Google Drive, Sheets, Docs, Gmail, YouTube, YouTube Music, Bandcamp, DistroKid, AI Assistant (BYOK), Stripe (dormant), Donations
+10. **Donate** (/donate) — Donation form with configurable amounts, title, description
 
 ## Navigation
 - Bottom nav bar with 5 buttons: Home, Artists, Events, DS, Profile (labels from settings)
 - Top ribbon with company name banner + logo/image area + hamburger menu (reads from settings)
-- Hamburger menu opens a sheet with nav links + Admin link + user info + logout
+- Hamburger menu opens a sheet with nav links + Donate + Admin + Integrations + user info + logout
 
 ## Data Models
 - **artists**: id, name, genre, description, imageUrl, email, phone, socialLinks, timeSlot, featured, promoterImageUrl
 - **events**: id, name, description, imageUrl, date, venue
 - **enquiries**: id, name, email, message, createdAt
 - **site_settings**: id, key (unique), value, type (text/image/color/font), section, label
+- **media_items**: id, title, url, type (youtube/bandcamp/soundcloud/audio), embedUrl, order
+- **donations**: id, name, email, amount, message, status, createdAt
 - **users**: Managed by Replit Auth (id, email, firstName, lastName, profileImageUrl)
 
 ## API Routes
@@ -48,6 +52,13 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - `GET /api/settings` — List all settings
 - `PUT /api/settings` — Upsert settings array
 - `POST /api/upload` — Upload image file (returns URL)
+- `GET /api/media` — List media items
+- `POST /api/media` — Create media item (URL validated against allow-list)
+- `PATCH /api/media/:id` — Update media item
+- `DELETE /api/media/:id` — Delete media item
+- `POST /api/donations` — Submit donation
+- `GET /api/donations` — List donations
+- `POST /api/ai/chat` — AI chat proxy (OpenAI/Anthropic, BYOK)
 - `GET /api/auth/user` — Current authenticated user
 - `GET /api/login` — Begin SSO login
 - `GET /api/logout` — Logout
@@ -74,6 +85,13 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Auth temporarily disabled during development
 - Admin dashboard should be intuitive enough for non-technical users
 
+## Security Notes
+- Media embed URLs validated against allow-list (YouTube, Bandcamp, SoundCloud, Spotify)
+- Media PATCH endpoint sanitizes input fields (only title, url, type, embedUrl, order allowed)
+- Auth temporarily disabled; admin endpoints need auth gates before shipping
+- AI endpoint proxies to OpenAI/Anthropic; user brings own API key stored in settings
+
 ## Recent Changes
 - Initial build: Feb 7, 2026
 - Added site_settings table, admin dashboard, image upload, settings CRUD, wired all public pages to settings: Feb 7, 2026
+- Added integrations admin page, media player, AI chat endpoint, donation page, media_items/donations tables: Feb 7, 2026

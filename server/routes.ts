@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEnquirySchema, insertArtistSchema, insertEventSchema } from "@shared/schema";
+import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema } from "@shared/schema";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import multer from "multer";
 import path from "path";
@@ -13,6 +13,24 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
+
+const ALLOWED_EMBED_HOSTS = [
+  "youtube.com", "www.youtube.com", "youtu.be",
+  "music.youtube.com",
+  "bandcamp.com",
+  "soundcloud.com", "w.soundcloud.com",
+  "open.spotify.com",
+];
+
+function isValidEmbedUrl(url: string | undefined | null): boolean {
+  if (!url) return true;
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_EMBED_HOSTS.some(h => parsed.hostname === h || parsed.hostname.endsWith("." + h));
+  } catch {
+    return false;
+  }
+}
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -200,6 +218,137 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error uploading file:", error);
       res.status(500).json({ message: "Failed to upload file" });
+    }
+  });
+
+  app.get("/api/media", async (_req, res) => {
+    try {
+      const items = await storage.getMediaItems();
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching media:", error);
+      res.status(500).json({ message: "Failed to fetch media" });
+    }
+  });
+
+  app.post("/api/media", async (req, res) => {
+    try {
+      const parsed = insertMediaItemSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
+      if (!isValidEmbedUrl(parsed.data.url) || !isValidEmbedUrl(parsed.data.embedUrl)) {
+        return res.status(400).json({ message: "URL must be from an allowed platform (YouTube, Bandcamp, SoundCloud, Spotify)" });
+      }
+      const item = await storage.createMediaItem(parsed.data);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating media item:", error);
+      res.status(500).json({ message: "Failed to create media item" });
+    }
+  });
+
+  app.patch("/api/media/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid media ID" });
+      const { title, url, type, embedUrl, order } = req.body;
+      if (!isValidEmbedUrl(url) || !isValidEmbedUrl(embedUrl)) {
+        return res.status(400).json({ message: "URL must be from an allowed platform (YouTube, Bandcamp, SoundCloud, Spotify)" });
+      }
+      const item = await storage.updateMediaItem(id, { title, url, type, embedUrl, order });
+      if (!item) return res.status(404).json({ message: "Media item not found" });
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating media item:", error);
+      res.status(500).json({ message: "Failed to update media item" });
+    }
+  });
+
+  app.delete("/api/media/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid media ID" });
+      await storage.deleteMediaItem(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting media item:", error);
+      res.status(500).json({ message: "Failed to delete media item" });
+    }
+  });
+
+  app.get("/api/donations", async (_req, res) => {
+    try {
+      const all = await storage.getDonations();
+      res.json(all);
+    } catch (error) {
+      console.error("Error fetching donations:", error);
+      res.status(500).json({ message: "Failed to fetch donations" });
+    }
+  });
+
+  app.post("/api/donations", async (req, res) => {
+    try {
+      const parsed = insertDonationSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
+      const donation = await storage.createDonation(parsed.data);
+      res.status(201).json(donation);
+    } catch (error) {
+      console.error("Error creating donation:", error);
+      res.status(500).json({ message: "Failed to submit donation" });
+    }
+  });
+
+  app.post("/api/ai/chat", async (req, res) => {
+    try {
+      const { message, provider, apiKey } = req.body;
+      if (!message || !apiKey) return res.status(400).json({ message: "Message and API key required" });
+
+      const p = provider || "openai";
+      let baseUrl = "https://api.openai.com/v1";
+      if (p === "anthropic") baseUrl = "https://api.anthropic.com/v1";
+
+      if (p === "anthropic") {
+        const resp = await fetch(`${baseUrl}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1024,
+            messages: [{ role: "user", content: message }],
+          }),
+        });
+        if (!resp.ok) {
+          const err = await resp.text();
+          return res.status(resp.status).json({ message: `AI API error: ${err}` });
+        }
+        const data = await resp.json();
+        res.json({ reply: data.content?.[0]?.text || "No response" });
+      } else {
+        const resp = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: message }],
+            max_tokens: 1024,
+          }),
+        });
+        if (!resp.ok) {
+          const err = await resp.text();
+          return res.status(resp.status).json({ message: `AI API error: ${err}` });
+        }
+        const data = await resp.json();
+        res.json({ reply: data.choices?.[0]?.message?.content || "No response" });
+      }
+    } catch (error) {
+      console.error("Error in AI chat:", error);
+      res.status(500).json({ message: "AI request failed" });
     }
   });
 
