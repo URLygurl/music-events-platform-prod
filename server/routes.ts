@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema, insertDsClientSchema } from "@shared/schema";
-import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin } from "./replit_integrations/auth";
 import { appendToSheet, isGoogleSheetsConnected } from "./google-sheets";
 import multer from "multer";
 import path from "path";
@@ -532,7 +532,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/users", isAdmin, async (_req, res) => {
+  app.get("/api/users", isSuperAdmin, async (_req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
       res.json(allUsers);
@@ -542,7 +542,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/users/:id/role", isAdmin, async (req: any, res) => {
+  app.patch("/api/users/:id/role", isSuperAdmin, async (req: any, res) => {
     try {
       const { role } = req.body;
       if (!role || !["user", "admin"].includes(role)) {

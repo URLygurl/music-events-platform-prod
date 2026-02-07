@@ -187,8 +187,43 @@ export const isAdmin: RequestHandler = async (req, res, next) => {
   }
 
   const dbUser = await authStorage.getUser(userId);
-  if (!dbUser || dbUser.role !== "admin") {
+  if (!dbUser || (dbUser.role !== "admin" && dbUser.role !== "superadmin")) {
     return res.status(403).json({ message: "Forbidden: admin access required" });
+  }
+
+  return next();
+};
+
+export const isSuperAdmin: RequestHandler = async (req, res, next) => {
+  const user = req.user as any;
+
+  if (!req.isAuthenticated() || !user.expires_at) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (now > user.expires_at) {
+    const refreshToken = user.refresh_token;
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    try {
+      const config = await getOidcConfig();
+      const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
+      updateUserSession(user, tokenResponse);
+    } catch (error) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+  }
+
+  const userId = user.claims?.sub;
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const dbUser = await authStorage.getUser(userId);
+  if (!dbUser || dbUser.role !== "superadmin") {
+    return res.status(403).json({ message: "Forbidden: superadmin access required" });
   }
 
   return next();

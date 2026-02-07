@@ -741,8 +741,10 @@ function FontUploadSection({
 
 export default function AdminPage() {
   const { toast } = useToast();
-  const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, isSuperAdmin, isLoading: authLoading } = useAuth();
+  const visibleSections = isSuperAdmin ? SECTIONS : SECTIONS.filter(s => s.id !== "users");
   const [step, setStep] = useState(0);
+  const clampedStep = Math.min(step, visibleSections.length - 1);
   const [localValues, setLocalValues] = useState<Record<string, string>>({});
 
   const { data: allSettings, isLoading: loadingSettings } = useQuery<SiteSetting[]>({
@@ -879,7 +881,7 @@ export default function AdminPage() {
 
   const { data: usersList, isLoading: loadingUsers } = useQuery<User[]>({
     queryKey: ["/api/users"],
-    enabled: isAdmin,
+    enabled: isSuperAdmin,
   });
 
   const roleMutation = useMutation({
@@ -899,7 +901,7 @@ export default function AdminPage() {
     setLocalValues((prev) => ({ ...prev, [key]: val }));
   };
 
-  const currentSection = SECTIONS[step];
+  const currentSection = visibleSections[clampedStep];
 
   const handleSaveSettings = () => {
     const sectionSettings = allSettings?.filter((s) => s.section === currentSection.id) || [];
@@ -956,7 +958,7 @@ export default function AdminPage() {
               </Button>
             </Link>
             <span className="text-xs text-muted-foreground">
-              {step + 1} / {SECTIONS.length}
+              {clampedStep + 1} / {visibleSections.length}
             </span>
           </div>
         </div>
@@ -964,14 +966,14 @@ export default function AdminPage() {
 
       <div className="max-w-lg mx-auto px-4 py-2">
         <div className="flex flex-wrap gap-1 py-2 border-b mb-4">
-          {SECTIONS.map((s, i) => {
+          {visibleSections.map((s, i) => {
             const Icon = s.icon;
             return (
               <button
                 key={s.id}
                 onClick={() => setStep(i)}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors ${
-                  i === step ? "bg-foreground text-background font-medium" : "text-muted-foreground"
+                  i === clampedStep ? "bg-foreground text-background font-medium" : "text-muted-foreground"
                 }`}
                 data-testid={`tab-${s.id}`}
               >
@@ -1148,7 +1150,7 @@ export default function AdminPage() {
                 <Plus className="w-4 h-4 mr-2" /> Add Client Profile
               </Button>
             </div>
-          ) : currentSection.id === "users" ? (
+          ) : currentSection.id === "users" && isSuperAdmin ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Manage who has admin access. Admins can edit content, manage artists, events, and all settings.
@@ -1248,8 +1250,8 @@ export default function AdminPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setStep(Math.max(0, step - 1))}
-              disabled={step === 0}
+              onClick={() => setStep(Math.max(0, clampedStep - 1))}
+              disabled={clampedStep === 0}
               data-testid="button-prev-section"
             >
               <ChevronLeft className="w-4 h-4 mr-1" /> Previous
@@ -1258,8 +1260,8 @@ export default function AdminPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setStep(Math.min(SECTIONS.length - 1, step + 1))}
-              disabled={step === SECTIONS.length - 1}
+              onClick={() => setStep(Math.min(visibleSections.length - 1, clampedStep + 1))}
+              disabled={clampedStep === visibleSections.length - 1}
               data-testid="button-next-section"
             >
               Next <ChevronRight className="w-4 h-4 ml-1" />

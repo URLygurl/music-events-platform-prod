@@ -116,16 +116,21 @@ A responsive wireframe web app for a music/events platform. Black and white desi
 - Admin dashboard should be intuitive enough for non-technical users
 
 ## Roles & Auth
-- **Users table** has a `role` column: `"user"` (default) or `"admin"`
+- **Users table** has a `role` column: `"user"` (default), `"admin"`, or `"superadmin"`
 - **Standard users**: Can browse all public pages (landing, artists, events, DS), use forms (enquiry/donation submissions), play media, share links — no login required
-- **Admin users**: Can access Profile, Donate, Admin Dashboard, Integrations, and all CRUD operations
+- **Admin users**: Can access Profile, Donate, Admin Dashboard (13 sections), Integrations, and all CRUD operations
+- **Superadmin**: Has all admin privileges plus exclusive access to the User Roles section (section #14) in admin dashboard; only superadmin can view/manage user roles via GET /api/users and PATCH /api/users/:id/role
 - **Hidden from non-admins**: Profile page, Donate page, Admin Dashboard, Integrations — removed from bottom nav and hamburger menu
-- To make someone an admin: `UPDATE users SET role = 'admin' WHERE email = 'their@email.com'`
+- **Hidden from regular admins**: User Roles section in admin dashboard (only superadmin sees it)
+- To become superadmin: `UPDATE users SET role = 'superadmin' WHERE email = 'your@email.com'`
+- Superadmin can then promote others to admin (or demote them) via the User Roles UI
 
 ## Security Notes
 - Media embed URLs validated against allow-list (YouTube, Bandcamp, SoundCloud, Spotify)
 - Media PATCH endpoint sanitizes input fields (only title, url, type, embedUrl, order allowed)
 - All admin/mutating API routes protected with `isAdmin` middleware (POST/PATCH/DELETE artists, events, media, ds-clients; PUT settings; uploads; CSV import/export; AI chat; GET enquiries/donations)
+- User management routes (GET /api/users, PATCH /api/users/:id/role) protected with `isSuperAdmin` middleware — only superadmin can access
+- Server-side self-demotion protection: superadmin cannot change their own role via API
 - Public read routes remain open: GET artists, events, settings, media, ds-clients; POST enquiries/donations (forms)
 - Frontend admin pages gated with useAuth `isAdmin` check — non-admin users see access denied message
 - upsertUser intentionally skips `role` field to prevent role escalation via SSO login
