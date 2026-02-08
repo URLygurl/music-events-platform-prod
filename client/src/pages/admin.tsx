@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { AppLayout } from "@/components/app-layout";
 import {
   Select,
   SelectContent,
@@ -947,7 +948,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <AppLayout showTopRibbon={false}>
       <div className="sticky top-0 z-50 border-b bg-background px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between gap-2">
           <h1 className="text-sm font-semibold">Admin Dashboard</h1>
@@ -1269,6 +1270,6 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
