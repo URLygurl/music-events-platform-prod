@@ -45,7 +45,7 @@ export function TopRibbon() {
       <div className="w-full border-b bg-background/90 backdrop-blur-md">
         <div className="relative w-full">
           {logoImage ? (
-            <img src={logoImage} alt="Logo" className="w-full object-cover" data-testid="img-logo" />
+            <img src={logoImage} alt="Logo" className="w-full max-h-48 object-cover" data-testid="img-logo" />
           ) : (
             <div
               className="w-full h-32 border-b border-dashed border-muted-foreground/40 flex items-center justify-center"
