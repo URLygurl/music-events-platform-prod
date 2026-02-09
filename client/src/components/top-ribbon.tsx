@@ -43,26 +43,24 @@ export function TopRibbon() {
       </div>
 
       <div className="w-full border-b bg-background/90 backdrop-blur-md">
-        <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex-1 h-8 rounded-md flex items-center justify-center overflow-visible">
-            {logoImage ? (
-              <img src={logoImage} alt="Logo" className="h-8 object-contain" data-testid="img-logo" />
-            ) : (
-              <div
-                className="w-full h-8 border border-dashed border-muted-foreground/40 rounded-md flex items-center justify-center"
-                data-testid="placeholder-logo"
-              >
-                <span className="text-xs text-muted-foreground">[ Logo / Image ]</span>
-              </div>
-            )}
-          </div>
-
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button size="icon" variant="ghost" data-testid="button-hamburger">
-                <Menu className="w-5 h-5" />
-              </Button>
-            </SheetTrigger>
+        <div className="relative w-full">
+          {logoImage ? (
+            <img src={logoImage} alt="Logo" className="w-full object-cover" data-testid="img-logo" />
+          ) : (
+            <div
+              className="w-full h-32 border-b border-dashed border-muted-foreground/40 flex items-center justify-center"
+              data-testid="placeholder-logo"
+            >
+              <span className="text-xs text-muted-foreground">[ Logo / Image ]</span>
+            </div>
+          )}
+          <div className="absolute top-2 right-2">
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button size="icon" variant="ghost" className="bg-background/60 backdrop-blur-sm" data-testid="button-hamburger">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
             <SheetContent side="right" className="w-64">
               <nav className="flex flex-col gap-2 mt-8">
                 {visiblePublicItems.map((item) => (
@@ -115,6 +113,7 @@ export function TopRibbon() {
               </nav>
             </SheetContent>
           </Sheet>
+          </div>
         </div>
       </div>
     </header>
