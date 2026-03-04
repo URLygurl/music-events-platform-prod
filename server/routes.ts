@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema, insertDsClientSchema } from "@shared/schema";
-import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin } from "./auth";
 import { appendToSheet, isGoogleSheetsConnected } from "./google-sheets";
 import multer from "multer";
 import path from "path";
@@ -66,14 +66,14 @@ export async function registerRoutes(
 
   app.get("/api/bootstrap-admin", isAuthenticated, async (req: any, res) => {
     try {
-      const claims = req.user?.claims;
-      if (!claims?.sub) return res.status(401).json({ message: "Not authenticated" });
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
       const existingAdmins = await storage.getAllUsers();
       const hasSuperAdmin = existingAdmins.some((u: any) => u.role === "superadmin");
       if (hasSuperAdmin) {
         return res.status(403).json({ message: "Superadmin already exists" });
       }
-      await storage.updateUserRole(claims.sub, "superadmin");
+      await storage.updateUserRole(userId, "superadmin");
       res.json({ message: "You are now superadmin. Refresh the page." });
     } catch (error) {
       console.error("Bootstrap admin error:", error);
@@ -576,7 +576,7 @@ export async function registerRoutes(
       if (!role || !["user", "admin"].includes(role)) {
         return res.status(400).json({ message: "Role must be 'user' or 'admin'" });
       }
-      const currentUserId = req.user?.claims?.sub;
+      const currentUserId = (req as any).user?.id;
       if (currentUserId && currentUserId === req.params.id) {
         return res.status(403).json({ message: "You cannot change your own role" });
       }

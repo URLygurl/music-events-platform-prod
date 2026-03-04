@@ -1,51 +1,36 @@
-// Google Sheets Integration (Replit Connector)
-import { google } from 'googleapis';
+/**
+ * Google Sheets Integration — portable replacement for the Replit connector.
+ *
+ * Uses a Google Service Account (JSON key) stored in the GOOGLE_SERVICE_ACCOUNT_JSON
+ * environment variable. If the env var is not set, all sheet operations silently
+ * no-op so the rest of the app keeps working without Google Sheets configured.
+ *
+ * To set up:
+ *  1. Create a Service Account in Google Cloud Console
+ *  2. Give it Editor access to the target Google Sheet
+ *  3. Download the JSON key and set GOOGLE_SERVICE_ACCOUNT_JSON=<contents>
+ */
 
-let connectionSettings: any;
+import { google } from "googleapis";
 
-async function getAccessToken() {
-  if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
-    return connectionSettings.settings.access_token;
+function getClient() {
+  const json = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!json) return null;
+  try {
+    const credentials = JSON.parse(json);
+    const auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+    return google.sheets({ version: "v4", auth });
+  } catch (err) {
+    console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:", err);
+    return null;
   }
-
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? 'repl ' + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL
-    : null;
-
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
-  }
-
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=google-sheet',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken,
-      },
-    },
-  )
-    .then((res) => res.json())
-    .then((data) => data.items?.[0]);
-
-  const accessToken =
-    connectionSettings?.settings?.access_token ||
-    connectionSettings.settings?.oauth?.credentials?.access_token;
-
-  if (!connectionSettings || !accessToken) {
-    throw new Error('Google Sheet not connected');
-  }
-  return accessToken;
 }
 
-async function getUncachableGoogleSheetClient() {
-  const accessToken = await getAccessToken();
-  const oauth2Client = new google.auth.OAuth2();
-  oauth2Client.setCredentials({ access_token: accessToken });
-  return google.sheets({ version: 'v4', auth: oauth2Client });
+export async function isGoogleSheetsConnected(): Promise<boolean> {
+  return !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 }
 
 export async function appendToSheet(
@@ -53,25 +38,20 @@ export async function appendToSheet(
   sheetName: string,
   values: string[][],
 ): Promise<void> {
+  const sheets = getClient();
+  if (!sheets) {
+    console.warn("Google Sheets not configured — skipping sheet append");
+    return;
+  }
   try {
-    const sheets = await getUncachableGoogleSheetClient();
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: `${sheetName}!A1`,
-      valueInputOption: 'USER_ENTERED',
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
       requestBody: { values },
     });
-  } catch (error) {
-    console.error('Failed to append to Google Sheet:', error);
-    throw error;
-  }
-}
-
-export async function isGoogleSheetsConnected(): Promise<boolean> {
-  try {
-    await getAccessToken();
-    return true;
-  } catch {
-    return false;
+  } catch (err) {
+    console.error("Failed to append to Google Sheet:", err);
   }
 }
