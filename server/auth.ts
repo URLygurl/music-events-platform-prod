@@ -30,7 +30,7 @@ export function getSession() {
   const PgStore = connectPg(session);
   const store = new PgStore({
     conString: process.env.DATABASE_URL!,
-    createTableIfMissing: false, // table already exists from Replit Auth
+    createTableIfMissing: true, // auto-create sessions table if it doesn't exist
     ttl: sessionTtl,
     tableName: "sessions",
   });
