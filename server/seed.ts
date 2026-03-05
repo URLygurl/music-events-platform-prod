@@ -3,6 +3,31 @@ import { artists, events, siteSettings } from "@shared/schema";
 import { sql } from "drizzle-orm";
 
 export async function seedDatabase() {
+  // Inline schema migrations — safe to run on every startup
+  try {
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS username varchar UNIQUE`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash varchar`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS activity_log (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id varchar NOT NULL,
+        user_email varchar,
+        user_name varchar,
+        user_role varchar,
+        action varchar NOT NULL,
+        resource varchar,
+        resource_id varchar,
+        description text,
+        metadata jsonb,
+        ip_address varchar,
+        created_at timestamp DEFAULT now()
+      )
+    `);
+    console.log("[seed] Schema migrations applied successfully");
+  } catch (err) {
+    console.error("[seed] Migration warning (may already exist):", err);
+  }
+
   const [existingArtists] = await db.select({ count: sql<number>`count(*)` }).from(artists);
   if (!existingArtists || Number(existingArtists.count) === 0) {
     console.log("Seeding artists & events...");
