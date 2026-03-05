@@ -48,10 +48,13 @@ import {
   Type,
   Shield,
   ShieldCheck,
+  Activity,
+  Clock,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import type { SiteSetting, Artist, Event, DsClient, User } from "@shared/schema";
+import type { ActivityLogEntry } from "@shared/models/auth";
 import { ARTIST_FIELD_LABELS, EVENT_FIELD_LABELS, DS_CLIENT_FIELD_LABELS, DEFAULT_ARTIST_VISIBILITY, DEFAULT_EVENT_VISIBILITY, DEFAULT_DS_CLIENT_VISIBILITY, getVisibleFields } from "@shared/schema";
 
 const FONT_OPTIONS = [
@@ -76,6 +79,7 @@ const SECTIONS = [
   { id: "ds", label: "DS Page", icon: LayoutGrid },
   { id: "navigation", label: "Navigation", icon: Navigation },
   { id: "users", label: "User Roles", icon: ShieldCheck },
+  { id: "activity", label: "Activity Log", icon: Activity },
 ] as const;
 
 function ImageUploadField({
@@ -743,7 +747,7 @@ function FontUploadSection({
 export default function AdminPage() {
   const { toast } = useToast();
   const { user, isAdmin, isSuperAdmin, isLoading: authLoading } = useAuth();
-  const visibleSections = isSuperAdmin ? SECTIONS : SECTIONS.filter(s => s.id !== "users");
+  const visibleSections = isSuperAdmin ? SECTIONS : SECTIONS.filter(s => s.id !== "users" && s.id !== "activity");
   const [step, setStep] = useState(0);
   const clampedStep = Math.min(step, visibleSections.length - 1);
   const [localValues, setLocalValues] = useState<Record<string, string>>({});
@@ -883,6 +887,11 @@ export default function AdminPage() {
   const { data: usersList, isLoading: loadingUsers } = useQuery<User[]>({
     queryKey: ["/api/users"],
     enabled: isSuperAdmin,
+  });
+  const { data: activityLogs, isLoading: loadingActivity } = useQuery<ActivityLogEntry[]>({
+    queryKey: ["/api/activity-log"],
+    enabled: isSuperAdmin,
+    refetchInterval: 30000, // refresh every 30s
   });
 
   const roleMutation = useMutation({
@@ -1212,6 +1221,49 @@ export default function AdminPage() {
               ) : (
                 <Card className="p-6 text-center overflow-visible">
                   <p className="text-sm text-muted-foreground">No users have logged in yet.</p>
+                </Card>
+              )}
+            </div>
+          ) : currentSection.id === "activity" && isSuperAdmin ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Real-time log of all admin actions across the platform.
+              </p>
+              {loadingActivity ? (
+                <Skeleton className="h-40 w-full" />
+              ) : activityLogs && activityLogs.length > 0 ? (
+                <div className="space-y-2">
+                  {activityLogs.map((log) => (
+                    <Card key={log.id} className="p-3 overflow-visible">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5">
+                          <Activity className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium">{log.userName || log.userEmail || "Unknown"}</span>
+                            <Badge variant={log.userRole === "superadmin" ? "default" : "secondary"} className="text-xs">
+                              {log.userRole || "user"}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs font-mono">{log.action}</Badge>
+                          </div>
+                          {log.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{log.description}</p>
+                          )}
+                          <div className="flex items-center gap-1 mt-1">
+                            <Clock className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">
+                              {log.createdAt ? new Date(log.createdAt).toLocaleString() : ""}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-6 text-center overflow-visible">
+                  <p className="text-sm text-muted-foreground">No activity recorded yet.</p>
                 </Card>
               )}
             </div>

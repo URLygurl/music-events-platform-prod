@@ -2,7 +2,10 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema, insertDsClientSchema } from "@shared/schema";
-import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin } from "./auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin, logActivity } from "./auth";
+import { db } from "./db";
+import { activityLog } from "@shared/models/auth";
+import { desc } from "drizzle-orm";
 import { appendToSheet, isGoogleSheetsConnected } from "./google-sheets";
 import multer from "multer";
 import path from "path";
@@ -641,6 +644,22 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error in AI chat:", error);
       res.status(500).json({ message: "AI request failed" });
+    }
+  });
+
+  // GET /api/activity-log — super admin only: view all admin activity
+  app.get("/api/activity-log", isSuperAdmin, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(String(req.query.limit || "100")), 500);
+      const logs = await db
+        .select()
+        .from(activityLog)
+        .orderBy(desc(activityLog.createdAt))
+        .limit(limit);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching activity log:", error);
+      res.status(500).json({ message: "Failed to fetch activity log" });
     }
   });
 
