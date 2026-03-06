@@ -10,6 +10,7 @@ import { MediaPlayer } from "@/components/media-player";
 import { SocialLinks } from "@/components/social-links";
 import { AnimationBoxes } from "@/components/animation-box";
 import { ShareButton } from "@/components/share-button";
+import { LandingTable } from "@/components/landing-table";
 import { useSettings } from "@/hooks/use-settings";
 import type { Artist, Event } from "@shared/schema";
 
@@ -32,6 +33,7 @@ export default function LandingPage() {
   const searchPlaceholder = get("landing_search_placeholder", "Search artists...");
   const bannerImage = get("landing_banner_image");
   const enquiryTitle = get("landing_enquiry_title", "Enquire / Subscribe");
+  const showEnquiry = get("landing_show_enquiry", "true") === "true";
 
   return (
     <AppLayout bgKey="bg_landing">
@@ -84,9 +86,17 @@ export default function LandingPage() {
         <AnimationBoxes />
       </div>
 
-      <div className="px-4 pb-8">
-        <EnquiryForm title={enquiryTitle} />
+      {/* Info table — sits above enquiry form */}
+      <div className="px-4 pb-4">
+        <LandingTable />
       </div>
+
+      {/* Enquiry form — toggled via landing_show_enquiry setting */}
+      {showEnquiry && (
+        <div className="px-4 pb-8">
+          <EnquiryForm title={enquiryTitle} />
+        </div>
+      )}
 
       <div className="px-4 pb-6 flex items-center justify-between gap-2 flex-wrap">
         <SocialLinks />

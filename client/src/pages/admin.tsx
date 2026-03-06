@@ -1551,6 +1551,63 @@ export default function AdminPage() {
               {currentSection.id === "style" && (
                 <FontUploadSection localValues={localValues} setLocal={setLocal} />
               )}
+              {currentSection.id === "landing" && (() => {
+                const COLS = [1, 2, 3, 4] as const;
+                const ROWS = [1, 2, 3, 4, 5, 6] as const;
+                const visibleCols = COLS.filter((c) => (localValues[`landing_table_col${c}_show`] ?? "true") === "true");
+                return (
+                  <div className="mt-6 space-y-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Info Table Cells</p>
+                    <div className="rounded-lg border border-black/10 overflow-hidden bg-white">
+                      <table className="w-full text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-muted/40">
+                            {COLS.map((c) => {
+                              const colVisible = (localValues[`landing_table_col${c}_show`] ?? "true") === "true";
+                              return (
+                                <th key={c} className="px-2 py-1.5 text-left border-b border-black/10 font-medium">
+                                  <div className="flex items-center gap-1">
+                                    <span className="flex-1 truncate">{localValues[`landing_table_col${c}_header`] ?? `Col ${c}`}</span>
+                                    <button
+                                      type="button"
+                                      className="shrink-0 text-muted-foreground hover:text-foreground"
+                                      onClick={() => setLocal(`landing_table_col${c}_show`, colVisible ? "false" : "true")}
+                                      title={colVisible ? "Hide column" : "Show column"}
+                                    >
+                                      {colVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                                    </button>
+                                  </div>
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ROWS.map((r) => (
+                            <tr key={r} className="border-b border-black/5 last:border-0">
+                              {COLS.map((c) => {
+                                const colVisible = (localValues[`landing_table_col${c}_show`] ?? "true") === "true";
+                                const cellKey = `landing_table_r${r}c${c}`;
+                                return (
+                                  <td key={c} className={`px-1 py-1 align-top ${!colVisible ? "opacity-30" : ""}`}>
+                                    <Input
+                                      value={localValues[cellKey] ?? ""}
+                                      onChange={(e) => setLocal(cellKey, e.target.value)}
+                                      className="h-7 text-xs px-1.5 border-0 bg-transparent focus:bg-white focus:border focus:border-black/20 rounded"
+                                      placeholder="—"
+                                      disabled={!colVisible}
+                                    />
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
               {currentSection.id === "animations" && (
                 <p className="text-xs text-muted-foreground mt-2">
                   Styles: fade-in, slide-up, slide-left, slide-right, zoom-in, bounce, pulse
