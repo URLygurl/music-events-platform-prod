@@ -17,6 +17,7 @@ import AdminPage from "@/pages/admin";
 import IntegrationsPage from "@/pages/integrations";
 import DonatePage from "@/pages/donate";
 import NotFound from "@/pages/not-found";
+import { ConciergeWidget } from "@/components/concierge-widget";
 
 function Router() {
   return (
@@ -44,6 +45,7 @@ function App() {
         <CustomFontLoader />
         <Toaster />
         <Router />
+        <ConciergeWidget />
       </TooltipProvider>
     </QueryClientProvider>
   );

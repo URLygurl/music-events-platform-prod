@@ -6,7 +6,8 @@ import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin, 
 import { db } from "./db";
 import { activityLog } from "@shared/models/auth";
 import { desc } from "drizzle-orm";
-import { appendToSheet, isGoogleSheetsConnected, testGoogleSheetsConnection } from "./google-sheets";
+import { appendToSheet, isGoogleSheetsConfigured, testGoogleSheetsConnection } from "./google-sheets";
+import { getConciergeSettings, buildSystemPrompt, callConciergeAI, generateArtistData } from "./concierge";
 import multer from "multer";
 import path from "path";
 import Papa from "papaparse";
@@ -644,6 +645,92 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error in AI chat:", error);
       res.status(500).json({ message: "AI request failed" });
+    }
+  });
+
+  // GET /api/concierge/settings — public: get concierge config for the frontend
+  app.get("/api/concierge/settings", async (_req, res) => {
+    try {
+      const settings = await getConciergeSettings();
+      // Only expose non-sensitive settings to the frontend
+      res.json({
+        enabled: settings.enabled,
+        publicAccess: settings.publicAccess,
+        name: settings.name,
+        triviaFrequencyMins: settings.triviaFrequencyMins,
+        hasApiKey: !!settings.apiKey,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get concierge settings" });
+    }
+  });
+
+  // POST /api/concierge/chat — chat with the AI concierge
+  app.post("/api/concierge/chat", async (req: any, res) => {
+    try {
+      const settings = await getConciergeSettings();
+      if (!settings.enabled) return res.status(403).json({ message: "Concierge is not enabled" });
+      if (!settings.apiKey) return res.status(400).json({ message: "No API key configured" });
+
+      const isUserAdmin = req.user?.role === "admin" || req.user?.role === "superadmin";
+      const isPublic = settings.publicAccess;
+      const isLoggedIn = !!req.user;
+
+      if (!isPublic && !isLoggedIn) {
+        return res.status(401).json({ message: "Please log in to use the concierge" });
+      }
+
+      const { messages } = req.body;
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ message: "Messages array required" });
+      }
+
+      const systemPrompt = await buildSystemPrompt(isUserAdmin);
+      const reply = await callConciergeAI(messages, systemPrompt, settings);
+      res.json({ reply });
+    } catch (error: any) {
+      console.error("Concierge chat error:", error);
+      res.status(500).json({ message: error.message || "Concierge request failed" });
+    }
+  });
+
+  // POST /api/concierge/trivia — get a trivia fact about a playing artist
+  app.post("/api/concierge/trivia", async (req: any, res) => {
+    try {
+      const settings = await getConciergeSettings();
+      if (!settings.enabled || !settings.apiKey) {
+        return res.status(403).json({ message: "Concierge not configured" });
+      }
+      const isPublic = settings.publicAccess;
+      const isLoggedIn = !!req.user;
+      if (!isPublic && !isLoggedIn) {
+        return res.status(401).json({ message: "Please log in" });
+      }
+      const systemPrompt = await buildSystemPrompt(false);
+      const reply = await callConciergeAI(
+        [{ role: "user", content: "Give me one interesting trivia fact about one of the artists playing at this event. Keep it to 2-3 sentences." }],
+        systemPrompt,
+        settings
+      );
+      res.json({ trivia: reply });
+    } catch (error: any) {
+      console.error("Concierge trivia error:", error);
+      res.status(500).json({ message: error.message || "Trivia request failed" });
+    }
+  });
+
+  // POST /api/concierge/generate-artist — admin only: generate artist data using AI
+  app.post("/api/concierge/generate-artist", isAdmin, async (req, res) => {
+    try {
+      const settings = await getConciergeSettings();
+      if (!settings.apiKey) return res.status(400).json({ message: "No concierge API key configured" });
+      const { artistName } = req.body;
+      if (!artistName) return res.status(400).json({ message: "artistName required" });
+      const data = await generateArtistData(artistName, settings);
+      res.json(data);
+    } catch (error: any) {
+      console.error("Generate artist error:", error);
+      res.status(500).json({ message: error.message || "Artist generation failed" });
     }
   });
 

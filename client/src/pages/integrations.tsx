@@ -40,6 +40,8 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 import { SiYoutube, SiBandcamp } from "react-icons/si";
 import { useSettings } from "@/hooks/use-settings";
@@ -128,6 +130,184 @@ function GoogleServiceAccountSection({
               {testResult.ok ? `✓ ${testResult.email}` : `✗ ${testResult.error}`}
             </Badge>
           )}
+        </div>
+      </Card>
+    </section>
+  );
+}
+
+function AIConciergeSection({
+  localValues,
+  setLocal,
+  allSettings,
+}: {
+  localValues: Record<string, string>;
+  setLocal: (k: string, v: string) => void;
+  allSettings?: SiteSetting[];
+}) {
+  const getVal = (key: string, fallback = "") =>
+    localValues[key] ?? (allSettings?.find((s) => s.key === key)?.value || fallback);
+  const [showKey, setShowKey] = useState(false);
+
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-1">
+        <Bot className="w-4 h-4" />
+        <h2 className="text-base font-semibold">AI Festival Concierge</h2>
+      </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        A floating chat widget that acts as a music-savvy festival concierge for your visitors.
+        Configure its persona, knowledge sources, and behaviour below.
+      </p>
+      <Card className="p-4 space-y-4 overflow-visible">
+        {/* Enable / Public access */}
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-medium">Enable Concierge</Label>
+          <Switch
+            checked={getVal("concierge_enabled", "false") === "true"}
+            onCheckedChange={(v) => setLocal("concierge_enabled", v ? "true" : "false")}
+            data-testid="toggle-concierge-enabled"
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-xs font-medium">Public Access</Label>
+            <p className="text-xs text-muted-foreground">On = all visitors. Off = logged-in users only (saves tokens for large events)</p>
+          </div>
+          <Switch
+            checked={getVal("concierge_public", "false") === "true"}
+            onCheckedChange={(v) => setLocal("concierge_public", v ? "true" : "false")}
+            data-testid="toggle-concierge-public"
+          />
+        </div>
+
+        {/* Name */}
+        <div className="space-y-1">
+          <Label className="text-xs">Concierge Name</Label>
+          <Input
+            value={getVal("concierge_name")}
+            onChange={(e) => setLocal("concierge_name", e.target.value)}
+            placeholder="e.g. Ziggy, The Archivist, Riff..."
+            data-testid="input-concierge-name"
+          />
+        </div>
+
+        {/* Trivia frequency */}
+        <div className="space-y-1">
+          <Label className="text-xs">Trivia Frequency (minutes)</Label>
+          <Input
+            type="number"
+            min="5"
+            max="240"
+            value={getVal("concierge_trivia_mins", "60")}
+            onChange={(e) => setLocal("concierge_trivia_mins", e.target.value)}
+            placeholder="60"
+            data-testid="input-concierge-trivia-mins"
+          />
+          <p className="text-xs text-muted-foreground">How often to proactively share a trivia fact (or when asked)</p>
+        </div>
+
+        {/* API Provider + Key + Model */}
+        <div className="space-y-1">
+          <Label className="text-xs">AI Provider</Label>
+          <Select
+            value={getVal("concierge_provider", "openai")}
+            onValueChange={(v) => setLocal("concierge_provider", v)}
+          >
+            <SelectTrigger data-testid="select-concierge-provider">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="openai">OpenAI</SelectItem>
+              <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Model</Label>
+          <Select
+            value={getVal("concierge_model", "gpt-4o-mini")}
+            onValueChange={(v) => setLocal("concierge_model", v)}
+          >
+            <SelectTrigger data-testid="select-concierge-model">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gpt-4o-mini">GPT-4o Mini (fast, cheap)</SelectItem>
+              <SelectItem value="gpt-4o">GPT-4o (best quality)</SelectItem>
+              <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+              <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku (fast, cheap)</SelectItem>
+              <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (best quality)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">API Key (separate from general AI assistant)</Label>
+          <div className="relative">
+            <Input
+              type={showKey ? "text" : "password"}
+              value={getVal("concierge_api_key")}
+              onChange={(e) => setLocal("concierge_api_key", e.target.value)}
+              placeholder="sk-... or sk-ant-..."
+              data-testid="input-concierge-api-key"
+            />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute top-0 right-0 h-full"
+              onClick={() => setShowKey(!showKey)}
+              type="button"
+            >
+              {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Context URLs */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+            <Label className="text-xs font-medium">Context Sources (URLs the AI can pull from)</Label>
+          </div>
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Source {n}</Label>
+              <Input
+                value={getVal(`concierge_context_url_${n}`)}
+                onChange={(e) => setLocal(`concierge_context_url_${n}`, e.target.value)}
+                placeholder="https://..."
+                data-testid={`input-concierge-context-url-${n}`}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Skills */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-muted-foreground" />
+            <Label className="text-xs font-medium">Skills (SKILL.md-style instruction sets)</Label>
+          </div>
+          <p className="text-xs text-muted-foreground">Each skill is a named instruction set that shapes how the AI behaves. Customise per event type.</p>
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="space-y-1 border rounded-lg p-3">
+              <Label className="text-xs text-muted-foreground">Skill {n} Name</Label>
+              <Input
+                value={getVal(`concierge_skill_${n}_name`)}
+                onChange={(e) => setLocal(`concierge_skill_${n}_name`, e.target.value)}
+                placeholder={`e.g. Metal Historian, Jazz Sommelier, Festival Guide...`}
+                data-testid={`input-concierge-skill-${n}-name`}
+              />
+              <Label className="text-xs text-muted-foreground mt-2 block">Skill {n} Instructions</Label>
+              <Textarea
+                value={getVal(`concierge_skill_${n}_content`)}
+                onChange={(e) => setLocal(`concierge_skill_${n}_content`, e.target.value)}
+                placeholder={`# ${n === 1 ? 'Music Expert' : n === 2 ? 'Festival Guide' : 'Local Knowledge'}\nDescribe what this skill does and how the AI should behave...`}
+                className="font-mono text-xs min-h-[80px]"
+                data-testid={`input-concierge-skill-${n}-content`}
+              />
+            </div>
+          ))}
         </div>
       </Card>
     </section>
@@ -541,7 +721,7 @@ export default function IntegrationsPage() {
   };
 
   const handleSave = () => {
-    const integrationSettings = allSettings?.filter((s) => s.section === "integrations" || s.section === "integrations_sheets" || s.section === "integrations_google") || [];
+    const integrationSettings = allSettings?.filter((s) => s.section === "integrations" || s.section === "integrations_sheets" || s.section === "integrations_google" || s.section === "integrations_concierge") || [];
     const toSave = integrationSettings.map((s) => ({
       key: s.key,
       value: localValues[s.key] ?? s.value,
@@ -551,7 +731,7 @@ export default function IntegrationsPage() {
     }));
     const newKeys = Object.keys(localValues).filter((k) => !integrationSettings.find((s) => s.key === k));
     for (const k of newKeys) {
-      const section = k.startsWith("google_sheet_") ? "integrations_sheets" : k === "google_service_account_json" ? "integrations_google" : "integrations";
+      const section = k.startsWith("google_sheet_") ? "integrations_sheets" : k === "google_service_account_json" ? "integrations_google" : k.startsWith("concierge_") ? "integrations_concierge" : "integrations";
       toSave.push({ key: k, value: localValues[k], type: "text", section, label: k });
     }
     saveMutation.mutate(toSave);
@@ -651,7 +831,10 @@ export default function IntegrationsPage() {
           );
         })}
 
-        <GoogleServiceAccountSection localValues={localValues} setLocal={setLocal} allSettings={allSettings} />
+         <GoogleServiceAccountSection localValues={localValues} setLocal={setLocal} allSettings={allSettings} />
+
+        {/* AI Concierge Settings */}
+        <AIConciergeSection localValues={localValues} setLocal={setLocal} allSettings={allSettings} />
 
         <section>
           <h2 className="text-base font-semibold mb-1">Google Sheets Sync</h2>

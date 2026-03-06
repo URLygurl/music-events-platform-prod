@@ -50,6 +50,8 @@ import {
   ShieldCheck,
   Activity,
   Clock,
+  Wand2,
+  Bot,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -372,11 +374,50 @@ function ArtistEditor({
     { key: "customLink5", label: "Custom Link 5" },
   ];
 
+  const [generating, setGenerating] = useState(false);
+  const { toast } = useToast();
+
+  const handleGenerateAI = async () => {
+    const artistName = (merged.name as string) || "";
+    if (!artistName.trim()) {
+      toast({ title: "Enter a band name first", description: "Type the artist/band name before generating.", variant: "destructive" });
+      return;
+    }
+    setGenerating(true);
+    try {
+      const res = await apiRequest("POST", "/api/concierge/generate-artist", { artistName });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      // Fill in the fields
+      const fields: Array<keyof Artist> = ["genre", "origin", "bio", "description"];
+      for (const field of fields) {
+        if (data[field]) set(field, data[field]);
+      }
+      if (data.members) set("members", data.members);
+      toast({ title: "Generated!", description: `AI filled in details for ${artistName}.` });
+    } catch (err: any) {
+      toast({ title: "Generation failed", description: err.message || "Could not generate artist data.", variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <Card className="p-4 space-y-3 overflow-visible">
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <h4 className="font-medium text-sm">{merged.name || "New Artist"}</h4>
         <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleGenerateAI}
+            disabled={generating}
+            title="Generate artist info with AI"
+            data-testid={`button-generate-artist-${artist.id}`}
+          >
+            <Wand2 className="w-3 h-3 mr-1" />
+            {generating ? "Generating..." : "AI Fill"}
+          </Button>
           <Button
             size="sm"
             onClick={() => { onSave(artist.id, local); setLocal({}); }}
