@@ -12,11 +12,12 @@ const PUBLIC_MENU_ITEMS = [
   { key: "artists", href: "/artists", settingKey: "menu_show_artists", labelKey: "nav_artists_label", defaultLabel: "Artists" },
   { key: "events", href: "/events", settingKey: "menu_show_events", labelKey: "nav_events_label", defaultLabel: "Events" },
   { key: "ds", href: "/ds", settingKey: "menu_show_ds", labelKey: "nav_ds_label", defaultLabel: "DS" },
+  { key: "shop", href: "/shop", settingKey: "menu_show_shop", labelKey: "nav_shop_label", defaultLabel: "Shop" },
+  { key: "donate", href: "/donate", settingKey: "menu_show_donate", labelKey: "nav_donate_label", defaultLabel: "Donate" },
 ];
 
 const ADMIN_MENU_ITEMS = [
   { key: "profile", href: "/profile", settingKey: "menu_show_profile", labelKey: "nav_profile_label", defaultLabel: "Profile" },
-  { key: "donate", href: "/donate", settingKey: "menu_show_donate", defaultLabel: "Donate" },
   { key: "admin", href: "/admin", settingKey: "menu_show_admin", defaultLabel: "Admin" },
   { key: "integrations", href: "/admin/integrations", settingKey: "menu_show_integrations", defaultLabel: "Integrations" },
 ];

@@ -115,6 +115,36 @@ export const donations = pgTable("donations", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const products = pgTable("products", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  price: integer("price").notNull().default(0), // price in cents
+  currency: text("currency").notNull().default("nzd"),
+  category: text("category").default("general"), // ticket, merch, service, digital, general
+  stock: integer("stock"), // null = unlimited
+  active: boolean("active").default(true),
+  stripePriceId: text("stripe_price_id"),
+  stripeProductId: text("stripe_product_id"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const orders = pgTable("orders", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  stripeSessionId: text("stripe_session_id").unique(),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  customerEmail: text("customer_email"),
+  customerName: text("customer_name"),
+  amountTotal: integer("amount_total"), // in cents
+  currency: text("currency").default("nzd"),
+  status: text("status").default("pending"), // pending, paid, failed, refunded
+  items: text("items"), // JSON array of {productId, name, qty, price}
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const uploadedFiles = pgTable("uploaded_files", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   filename: text("filename").notNull(),
@@ -130,6 +160,8 @@ export const insertSiteSettingSchema = createInsertSchema(siteSettings).omit({ i
 export const insertMediaItemSchema = createInsertSchema(mediaItems).omit({ id: true });
 export const insertDonationSchema = createInsertSchema(donations).omit({ id: true, createdAt: true });
 export const insertDsClientSchema = createInsertSchema(dsClients).omit({ id: true });
+export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true });
+export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
 
 export type Artist = typeof artists.$inferSelect;
 export type InsertArtist = z.infer<typeof insertArtistSchema>;
@@ -145,6 +177,10 @@ export type Donation = typeof donations.$inferSelect;
 export type InsertDonation = z.infer<typeof insertDonationSchema>;
 export type DsClient = typeof dsClients.$inferSelect;
 export type InsertDsClient = z.infer<typeof insertDsClientSchema>;
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
 export const ARTIST_FIELD_LABELS: Record<string, string> = {
   name: "Band Name",

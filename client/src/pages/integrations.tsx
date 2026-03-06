@@ -586,14 +586,20 @@ function PaymentsSection({
   setLocal: (k: string, v: string) => void;
 }) {
   const { get } = useSettings();
-  const [showKey, setShowKey] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
+  const [showWebhook, setShowWebhook] = useState(false);
 
   const stripeEnabled = (localValues["int_stripe_enabled"] ?? get("int_stripe_enabled", "false")) === "true";
-  const stripeKey = localValues["int_stripe_key"] ?? get("int_stripe_key", "");
+  const stripePubKey = localValues["stripe_publishable_key"] ?? get("stripe_publishable_key", "");
+  const stripeSecretKey = localValues["stripe_secret_key"] ?? get("stripe_secret_key", "");
+  const stripeWebhookSecret = localValues["stripe_webhook_secret"] ?? get("stripe_webhook_secret", "");
   const donationsEnabled = (localValues["int_donations_enabled"] ?? get("int_donations_enabled", "false")) === "true";
   const donationsTitle = localValues["int_donations_title"] ?? get("int_donations_title", "Support Our Mission");
   const donationsDesc = localValues["int_donations_description"] ?? get("int_donations_description", "Your support helps us keep the music alive.");
   const donationsAmounts = localValues["int_donations_amounts"] ?? get("int_donations_amounts", "5,10,25,50,100");
+
+  const isLive = stripePubKey.startsWith("pk_live") || stripeSecretKey.startsWith("sk_live");
+  const isConfigured = stripePubKey.startsWith("pk_") && stripeSecretKey.startsWith("sk_");
 
   return (
     <div className="space-y-6">
@@ -604,7 +610,13 @@ function PaymentsSection({
             <span className="text-sm font-medium">Stripe Payments</span>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="text-xs">Dormant</Badge>
+            {isConfigured ? (
+              <Badge variant={isLive ? "default" : "secondary"} className="text-xs">
+                {isLive ? "Live" : "Test Mode"}
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="text-xs">Not Configured</Badge>
+            )}
             <Switch
               checked={stripeEnabled}
               onCheckedChange={(v) => setLocal("int_stripe_enabled", v ? "true" : "false")}
@@ -615,23 +627,51 @@ function PaymentsSection({
         {stripeEnabled && (
           <Card className="p-4 space-y-3 overflow-visible">
             <p className="text-xs text-muted-foreground">
-              Stripe is currently in dormant mode. Configure your keys now and activate when ready.
+              Paste your Stripe keys below. Find them in your{" "}
+              <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="underline">Stripe Dashboard → API Keys</a>.
+              The Shop and Donations pages will automatically use Stripe Hosted Checkout once keys are saved.
             </p>
             <div className="space-y-1">
-              <Label className="text-xs">Publishable Key</Label>
+              <Label className="text-xs">Publishable Key (pk_...)</Label>
+              <Input
+                value={stripePubKey}
+                onChange={(e) => setLocal("stripe_publishable_key", e.target.value)}
+                placeholder="pk_test_... or pk_live_..."
+                data-testid="input-stripe-publishable-key"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Secret Key (sk_...)</Label>
               <div className="flex items-center gap-2">
                 <Input
-                  type={showKey ? "text" : "password"}
-                  value={stripeKey}
-                  onChange={(e) => setLocal("int_stripe_key", e.target.value)}
-                  placeholder="pk_..."
+                  type={showSecret ? "text" : "password"}
+                  value={stripeSecretKey}
+                  onChange={(e) => setLocal("stripe_secret_key", e.target.value)}
+                  placeholder="sk_test_... or sk_live_..."
                   className="flex-1"
-                  data-testid="input-stripe-key"
+                  data-testid="input-stripe-secret-key"
                 />
-                <Button size="icon" variant="ghost" onClick={() => setShowKey(!showKey)}>
-                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <Button size="icon" variant="ghost" onClick={() => setShowSecret(!showSecret)}>
+                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </Button>
               </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Webhook Secret (optional — whsec_...)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type={showWebhook ? "text" : "password"}
+                  value={stripeWebhookSecret}
+                  onChange={(e) => setLocal("stripe_webhook_secret", e.target.value)}
+                  placeholder="whsec_..."
+                  className="flex-1"
+                  data-testid="input-stripe-webhook-secret"
+                />
+                <Button size="icon" variant="ghost" onClick={() => setShowWebhook(!showWebhook)}>
+                  {showWebhook ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Webhook URL: <code className="text-xs">/api/stripe/webhook</code> — add this in your Stripe Dashboard → Webhooks.</p>
             </div>
           </Card>
         )}
@@ -657,7 +697,7 @@ function PaymentsSection({
         {donationsEnabled && (
           <Card className="p-4 space-y-3 overflow-visible">
             <p className="text-xs text-muted-foreground">
-              Enable a donation page where supporters can contribute. Works without Stripe — donations are logged for manual processing.
+              Enable a donation page where supporters can contribute. When Stripe keys are configured, donations go through Stripe Hosted Checkout. Without Stripe, donations are logged for manual processing.
             </p>
             <div className="space-y-1">
               <Label className="text-xs">Page Title</Label>

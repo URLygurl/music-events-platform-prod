@@ -16,6 +16,7 @@ import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin";
 import IntegrationsPage from "@/pages/integrations";
 import DonatePage from "@/pages/donate";
+import ShopPage from "@/pages/shop";
 import NotFound from "@/pages/not-found";
 import { ConciergeWidget } from "@/components/concierge-widget";
 
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/events" component={EventsPage} />
       <Route path="/ds" component={DSPage} />
       <Route path="/donate" component={DonatePage} />
+      <Route path="/shop" component={ShopPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route component={NotFound} />
     </Switch>

@@ -52,10 +52,12 @@ import {
   Clock,
   Wand2,
   Bot,
+  ShoppingBag,
+  DollarSign,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import type { SiteSetting, Artist, Event, DsClient, User } from "@shared/schema";
+import type { SiteSetting, Artist, Event, DsClient, User, Product } from "@shared/schema";
 import type { ActivityLogEntry } from "@shared/models/auth";
 import { ARTIST_FIELD_LABELS, EVENT_FIELD_LABELS, DS_CLIENT_FIELD_LABELS, DEFAULT_ARTIST_VISIBILITY, DEFAULT_EVENT_VISIBILITY, DEFAULT_DS_CLIENT_VISIBILITY, getVisibleFields } from "@shared/schema";
 
@@ -80,6 +82,9 @@ const SECTIONS = [
   { id: "events_page", label: "Events Page", icon: CalendarDays },
   { id: "ds", label: "DS Page", icon: LayoutGrid },
   { id: "navigation", label: "Navigation", icon: Navigation },
+  { id: "shop_page", label: "Shop Page", icon: ShoppingBag },
+  { id: "shop", label: "Manage Shop", icon: ShoppingBag },
+  { id: "orders", label: "Orders", icon: DollarSign },
   { id: "users", label: "User Roles", icon: ShieldCheck },
   { id: "activity", label: "Activity Log", icon: Activity },
 ] as const;
@@ -715,6 +720,125 @@ function DsClientEditor({
   );
 }
 
+function ProductEditor({
+  product,
+  onSave,
+  onDelete,
+  saving,
+}: {
+  product: Product;
+  onSave: (id: number, data: Partial<Product>) => void;
+  onDelete: (id: number) => void;
+  saving: boolean;
+}) {
+  const [local, setLocal] = useState<Partial<Product>>({});
+  const merged = { ...product, ...local };
+
+  const set = (field: string, value: any) => {
+    setLocal((prev) => ({ ...prev, [field]: value }));
+  };
+
+  return (
+    <Card className="p-4 space-y-3 overflow-visible">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <h4 className="font-medium text-sm">{merged.name || "New Product"}</h4>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            onClick={() => { onSave(product.id, local); setLocal({}); }}
+            disabled={saving || Object.keys(local).length === 0}
+            data-testid={`button-save-product-${product.id}`}
+          >
+            <Check className="w-3 h-3 mr-1" /> Save
+          </Button>
+          <Button size="icon" variant="ghost" onClick={() => onDelete(product.id)} data-testid={`button-delete-product-${product.id}`}>
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        <ImageUploadField
+          label="Product Image"
+          value={(merged.imageUrl as string) || ""}
+          onChange={(v) => set("imageUrl", v)}
+        />
+        <div className="space-y-1">
+          <Label className="text-xs">Product Name</Label>
+          <Input
+            value={(merged.name as string) || ""}
+            onChange={(e) => set("name", e.target.value)}
+            data-testid={`input-product-name-${product.id}`}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Description</Label>
+          <Textarea
+            value={(merged.description as string) || ""}
+            onChange={(e) => set("description", e.target.value)}
+            rows={2}
+            className="resize-none"
+            data-testid={`input-product-description-${product.id}`}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Price (cents, e.g. 2500 = $25.00)</Label>
+            <Input
+              type="number"
+              value={merged.price ?? 0}
+              onChange={(e) => set("price", parseInt(e.target.value) || 0)}
+              data-testid={`input-product-price-${product.id}`}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Currency</Label>
+            <Input
+              value={(merged.currency as string) || "nzd"}
+              onChange={(e) => set("currency", e.target.value.toLowerCase())}
+              placeholder="nzd"
+              data-testid={`input-product-currency-${product.id}`}
+            />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Category</Label>
+          <select
+            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+            value={(merged.category as string) || "general"}
+            onChange={(e) => set("category", e.target.value)}
+            data-testid={`select-product-category-${product.id}`}
+          >
+            <option value="general">General</option>
+            <option value="ticket">Ticket</option>
+            <option value="merch">Merchandise</option>
+            <option value="digital">Digital</option>
+            <option value="service">Service</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Stock (leave blank for unlimited)</Label>
+          <Input
+            type="number"
+            value={merged.stock ?? ""}
+            onChange={(e) => set("stock", e.target.value === "" ? null : parseInt(e.target.value))}
+            placeholder="Unlimited"
+            data-testid={`input-product-stock-${product.id}`}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={merged.active ?? true}
+            onCheckedChange={(v) => set("active", v)}
+            data-testid={`switch-product-active-${product.id}`}
+          />
+          <Label className="text-xs">Active (visible in shop)</Label>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function FontUploadSection({
   localValues,
   setLocal,
@@ -807,6 +931,12 @@ export default function AdminPage() {
 
   const { data: dsClientsList, isLoading: loadingDsClients } = useQuery<DsClient[]>({
     queryKey: ["/api/ds-clients"],
+  });
+  const { data: productsList, isLoading: loadingProducts } = useQuery<Product[]>({
+    queryKey: ["/api/products/all"],
+  });
+  const { data: ordersList, isLoading: loadingOrders } = useQuery<any[]>({
+    queryKey: ["/api/orders"],
   });
 
   const saveMutation = useMutation({
@@ -922,6 +1052,39 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ds-clients"] });
       toast({ title: "Added", description: "Empty client profile created." });
+    },
+  });
+
+  const productMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Product> }) => {
+      await apiRequest("PUT", `/api/products/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products/all"] });
+      toast({ title: "Saved", description: "Product updated." });
+    },
+  });
+  const deleteProductMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/products/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products/all"] });
+      toast({ title: "Deleted", description: "Product removed." });
+    },
+  });
+  const addProductMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/products", {
+        name: "New Product",
+        price: 0,
+        currency: "nzd",
+        active: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products/all"] });
+      toast({ title: "Added", description: "Empty product created." });
     },
   });
 
@@ -1200,6 +1363,76 @@ export default function AdminPage() {
               >
                 <Plus className="w-4 h-4 mr-2" /> Add Client Profile
               </Button>
+            </div>
+          ) : currentSection.id === "shop" ? (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Add products for sale in your Shop page. Set prices in cents (e.g. 2500 = $25.00 NZD).
+              </p>
+              {loadingProducts ? (
+                <Skeleton className="h-40 w-full" />
+              ) : (
+                productsList?.map((product) => (
+                  <ProductEditor
+                    key={product.id}
+                    product={product}
+                    onSave={(id, data) => productMutation.mutate({ id, data })}
+                    onDelete={(id) => deleteProductMutation.mutate(id)}
+                    saving={productMutation.isPending}
+                  />
+                ))
+              )}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => addProductMutation.mutate()}
+                disabled={addProductMutation.isPending}
+                data-testid="button-add-product"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Add Product
+              </Button>
+            </div>
+          ) : currentSection.id === "orders" ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                All orders placed through the Shop and Donations pages.
+              </p>
+              {loadingOrders ? (
+                <Skeleton className="h-40 w-full" />
+              ) : ordersList && ordersList.length > 0 ? (
+                <div className="space-y-2">
+                  {ordersList.map((order: any) => (
+                    <Card key={order.id} className="p-3 overflow-visible">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{order.customerName || order.customerEmail || "Anonymous"}</span>
+                            <Badge variant={order.status === "paid" ? "default" : order.status === "failed" ? "destructive" : "secondary"} className="text-xs capitalize">
+                              {order.status}
+                            </Badge>
+                          </div>
+                          {order.customerEmail && order.customerName && (
+                            <p className="text-xs text-muted-foreground">{order.customerEmail}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {order.amountTotal ? new Intl.NumberFormat("en-NZ", { style: "currency", currency: (order.currency || "nzd").toUpperCase() }).format(order.amountTotal / 100) : "—"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {order.createdAt ? new Date(order.createdAt).toLocaleString() : ""}
+                          </span>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-6 text-center overflow-visible">
+                  <p className="text-sm text-muted-foreground">No orders yet.</p>
+                </Card>
+              )}
             </div>
           ) : currentSection.id === "users" && isSuperAdmin ? (
             <div className="space-y-4">

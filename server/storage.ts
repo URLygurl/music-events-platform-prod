@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import {
   artists, events, enquiries, siteSettings, mediaItems, donations, dsClients,
-  users, uploadedFiles,
+  users, uploadedFiles, products, orders,
   type Artist, type InsertArtist,
   type Event, type InsertEvent,
   type Enquiry, type InsertEnquiry,
@@ -10,6 +10,8 @@ import {
   type MediaItem, type InsertMediaItem,
   type Donation, type InsertDonation,
   type DsClient, type InsertDsClient,
+  type Product, type InsertProduct,
+  type Order, type InsertOrder,
   type User,
 } from "@shared/schema";
 
@@ -46,6 +48,16 @@ export interface IStorage {
   updateUserRole(id: string, role: string): Promise<User | undefined>;
   createUploadedFile(file: { filename: string; mimeType: string; data: string }): Promise<{ id: number }>;
   getUploadedFile(id: number): Promise<{ id: number; filename: string; mimeType: string; data: string } | undefined>;
+  getProducts(): Promise<Product[]>;
+  getProduct(id: number): Promise<Product | undefined>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: number, data: Partial<InsertProduct>): Promise<Product | undefined>;
+  deleteProduct(id: number): Promise<void>;
+  getOrders(): Promise<Order[]>;
+  getOrder(id: number): Promise<Order | undefined>;
+  getOrderBySessionId(sessionId: string): Promise<Order | undefined>;
+  createOrder(order: InsertOrder): Promise<Order>;
+  updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -210,5 +222,46 @@ export class DatabaseStorage implements IStorage {
     return file;
   }
 }
+
+// DatabaseStorage implementation for products and orders
+Object.assign(DatabaseStorage.prototype, {
+  async getProducts(): Promise<Product[]> {
+    return db.select().from(products).orderBy(products.sortOrder);
+  },
+  async getProduct(id: number): Promise<Product | undefined> {
+    const [p] = await db.select().from(products).where(eq(products.id, id));
+    return p;
+  },
+  async createProduct(product: InsertProduct): Promise<Product> {
+    const [created] = await db.insert(products).values(product).returning();
+    return created;
+  },
+  async updateProduct(id: number, data: Partial<InsertProduct>): Promise<Product | undefined> {
+    const [updated] = await db.update(products).set(data).where(eq(products.id, id)).returning();
+    return updated;
+  },
+  async deleteProduct(id: number): Promise<void> {
+    await db.delete(products).where(eq(products.id, id));
+  },
+  async getOrders(): Promise<Order[]> {
+    return db.select().from(orders);
+  },
+  async getOrder(id: number): Promise<Order | undefined> {
+    const [o] = await db.select().from(orders).where(eq(orders.id, id));
+    return o;
+  },
+  async getOrderBySessionId(sessionId: string): Promise<Order | undefined> {
+    const [o] = await db.select().from(orders).where(eq(orders.stripeSessionId, sessionId));
+    return o;
+  },
+  async createOrder(order: InsertOrder): Promise<Order> {
+    const [created] = await db.insert(orders).values(order).returning();
+    return created;
+  },
+  async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
+    const [updated] = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
+    return updated;
+  },
+});
 
 export const storage = new DatabaseStorage();
