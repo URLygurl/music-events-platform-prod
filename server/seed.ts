@@ -9,34 +9,46 @@ export async function seedDatabase() {
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash varchar`);
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS products (
-        id serial PRIMARY KEY,
-        name varchar NOT NULL,
+        id integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        name text NOT NULL,
         description text,
-        price_cents integer NOT NULL DEFAULT 0,
-        currency varchar NOT NULL DEFAULT 'usd',
         image_url text,
-        category varchar,
+        price integer NOT NULL DEFAULT 0,
+        currency text NOT NULL DEFAULT 'nzd',
+        category text DEFAULT 'general',
         stock integer,
         active boolean DEFAULT true,
+        stripe_price_id text,
+        stripe_product_id text,
         sort_order integer DEFAULT 0,
         created_at timestamp DEFAULT now()
       )
     `);
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS orders (
-        id serial PRIMARY KEY,
-        stripe_session_id varchar UNIQUE,
-        stripe_payment_intent varchar,
-        customer_email varchar,
-        customer_name varchar,
-        line_items jsonb,
+        id integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        stripe_session_id text UNIQUE,
+        stripe_payment_intent_id text,
+        customer_email text,
+        customer_name text,
         amount_total integer,
-        currency varchar DEFAULT 'usd',
-        status varchar NOT NULL DEFAULT 'pending',
-        metadata jsonb,
+        currency text DEFAULT 'nzd',
+        status text DEFAULT 'pending',
+        items text,
+        metadata text,
         created_at timestamp DEFAULT now()
       )
     `);
+    // Fix column name if table was created with wrong name in a previous deploy
+    try {
+      await db.execute(sql`ALTER TABLE products RENAME COLUMN price_cents TO price`);
+    } catch (_) { /* column already correct or doesn't exist */ }
+    try {
+      await db.execute(sql`ALTER TABLE orders RENAME COLUMN stripe_payment_intent TO stripe_payment_intent_id`);
+    } catch (_) { /* column already correct or doesn't exist */ }
+    try {
+      await db.execute(sql`ALTER TABLE orders RENAME COLUMN line_items TO items`);
+    } catch (_) { /* column already correct or doesn't exist */ }
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS activity_log (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
