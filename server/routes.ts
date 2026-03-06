@@ -16,10 +16,10 @@ const FONT_MIMES = ["font/ttf", "font/otf", "font/woff", "font/woff2", "applicat
 
 const ALLOWED_EMBED_HOSTS = [
   "youtube.com", "www.youtube.com", "youtu.be",
-  "music.youtube.com",
   "bandcamp.com",
   "soundcloud.com", "w.soundcloud.com",
-  "open.spotify.com",
+  "open.spotify.com", "embed.spotify.com",
+  "embed.music.apple.com", "music.apple.com",
 ];
 
 function isValidEmbedUrl(url: string | undefined | null): boolean {

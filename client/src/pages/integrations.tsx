@@ -152,9 +152,9 @@ const INTEGRATION_GROUPS = [
     description: "Connect music and video services for embedded playback",
     items: [
       { key: "int_youtube_enabled", icon: Video, name: "YouTube", desc: "Embed YouTube videos" },
-      { key: "int_youtube_music_enabled", icon: Music, name: "YouTube Music", desc: "Stream music content" },
+      { key: "int_spotify_enabled", icon: Music, name: "Spotify", desc: "Embed Spotify tracks, albums and playlists" },
       { key: "int_bandcamp_enabled", icon: Music, name: "Bandcamp", desc: "Embed Bandcamp tracks and albums" },
-      { key: "int_distrokid_enabled", icon: Music, name: "DistroKid", desc: "Link DistroKid releases" },
+      { key: "int_apple_music_enabled", icon: Music, name: "Apple Music", desc: "Embed Apple Music tracks and albums" },
     ],
   },
   {
@@ -279,7 +279,9 @@ function MediaManager() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="youtube">YouTube</SelectItem>
+                <SelectItem value="spotify">Spotify</SelectItem>
                 <SelectItem value="bandcamp">Bandcamp</SelectItem>
+                <SelectItem value="apple_music">Apple Music</SelectItem>
                 <SelectItem value="soundcloud">SoundCloud</SelectItem>
                 <SelectItem value="audio">Audio File</SelectItem>
               </SelectContent>
@@ -306,6 +308,7 @@ function MediaManager() {
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-8 h-8 rounded-md border flex items-center justify-center flex-shrink-0">
                   {item.type === "youtube" ? <Video className="w-3.5 h-3.5" /> : <Music className="w-3.5 h-3.5" />}
+                  {/* spotify, apple_music, bandcamp, soundcloud all use Music icon */}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{item.title}</p>
