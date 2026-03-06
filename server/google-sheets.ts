@@ -1,20 +1,37 @@
 /**
- * Google Sheets Integration — portable replacement for the Replit connector.
+ * Google Sheets Integration
  *
- * Uses a Google Service Account (JSON key) stored in the GOOGLE_SERVICE_ACCOUNT_JSON
- * environment variable. If the env var is not set, all sheet operations silently
- * no-op so the rest of the app keeps working without Google Sheets configured.
+ * Reads the Google Service Account JSON from:
+ *  1. The `google_service_account_json` site setting in the database (set via the admin integrations panel)
+ *  2. Falls back to the GOOGLE_SERVICE_ACCOUNT_JSON environment variable
  *
- * To set up:
- *  1. Create a Service Account in Google Cloud Console
- *  2. Give it Editor access to the target Google Sheet
- *  3. Download the JSON key and set GOOGLE_SERVICE_ACCOUNT_JSON=<contents>
+ * If neither is set, all sheet operations silently no-op so the rest of the app keeps working.
  */
 
 import { google } from "googleapis";
+import { db } from "./db";
+import { siteSettings } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
-function getClient() {
-  const json = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+async function getServiceAccountJson(): Promise<string | null> {
+  // 1. Try database first
+  try {
+    const [setting] = await db
+      .select()
+      .from(siteSettings)
+      .where(eq(siteSettings.key, "google_service_account_json"));
+    if (setting?.value && setting.value.trim().length > 10) {
+      return setting.value;
+    }
+  } catch {
+    // DB not available yet — fall through to env var
+  }
+  // 2. Fall back to env var
+  return process.env.GOOGLE_SERVICE_ACCOUNT_JSON || null;
+}
+
+async function getClient() {
+  const json = await getServiceAccountJson();
   if (!json) return null;
   try {
     const credentials = JSON.parse(json);
@@ -24,13 +41,37 @@ function getClient() {
     });
     return google.sheets({ version: "v4", auth });
   } catch (err) {
-    console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:", err);
+    console.error("Failed to parse Google Service Account JSON:", err);
     return null;
   }
 }
 
 export async function isGoogleSheetsConnected(): Promise<boolean> {
-  return !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  const json = await getServiceAccountJson();
+  if (!json) return false;
+  try {
+    JSON.parse(json);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function testGoogleSheetsConnection(): Promise<{ ok: boolean; email?: string; error?: string }> {
+  const json = await getServiceAccountJson();
+  if (!json) return { ok: false, error: "No service account configured" };
+  try {
+    const credentials = JSON.parse(json);
+    const auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+    // Just getting the auth client verifies the credentials are valid
+    await auth.getClient();
+    return { ok: true, email: credentials.client_email };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || "Invalid service account JSON" };
+  }
 }
 
 export async function appendToSheet(
@@ -38,7 +79,7 @@ export async function appendToSheet(
   sheetName: string,
   values: string[][],
 ): Promise<void> {
-  const sheets = getClient();
+  const sheets = await getClient();
   if (!sheets) {
     console.warn("Google Sheets not configured — skipping sheet append");
     return;

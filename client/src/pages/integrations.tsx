@@ -47,6 +47,93 @@ import { useAuth } from "@/hooks/use-auth";
 import type { SiteSetting, MediaItem } from "@shared/schema";
 import { Link } from "wouter";
 
+function GoogleServiceAccountSection({
+  localValues,
+  setLocal,
+  allSettings,
+}: {
+  localValues: Record<string, string>;
+  setLocal: (k: string, v: string) => void;
+  allSettings?: SiteSetting[];
+}) {
+  const { toast } = useToast();
+  const [showJson, setShowJson] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; email?: string; error?: string } | null>(null);
+
+  const currentValue = localValues["google_service_account_json"] ?? (allSettings?.find(s => s.key === "google_service_account_json")?.value || "");
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await apiRequest("POST", "/api/google/test-connection");
+      const data = await res.json();
+      setTestResult(data);
+      if (data.ok) {
+        toast({ title: "Connected!", description: `Service account: ${data.email}` });
+      } else {
+        toast({ title: "Connection failed", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      setTestResult({ ok: false, error: "Request failed" });
+      toast({ title: "Error", description: "Could not reach the server.", variant: "destructive" });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <section>
+      <h2 className="text-base font-semibold mb-1">Google Service Account</h2>
+      <p className="text-xs text-muted-foreground mb-3">
+        Paste your Google Service Account JSON key here to enable Google Sheets sync, Google Docs, and Gmail. 
+        <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank" rel="noreferrer" className="underline ml-1">Get a key from Google Cloud Console</a>.
+      </p>
+      <Card className="p-4 space-y-3 overflow-visible">
+        <div className="space-y-1">
+          <Label className="text-xs">Service Account JSON</Label>
+          <div className="relative">
+            <Textarea
+              value={currentValue}
+              onChange={(e) => setLocal("google_service_account_json", e.target.value)}
+              placeholder='{"type": "service_account", "project_id": "...", "private_key": "..."}'
+              className={`font-mono text-xs min-h-[80px] ${!showJson && currentValue ? "blur-sm select-none" : ""}`}
+              data-testid="input-google-service-account-json"
+            />
+            {currentValue && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="absolute top-2 right-2"
+                onClick={() => setShowJson(!showJson)}
+              >
+                {showJson ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleTest}
+            disabled={testing || !currentValue}
+            data-testid="button-test-google-connection"
+          >
+            {testing ? "Testing..." : "Test Connection"}
+          </Button>
+          {testResult && (
+            <Badge variant={testResult.ok ? "default" : "destructive"} className="text-xs">
+              {testResult.ok ? `✓ ${testResult.email}` : `✗ ${testResult.error}`}
+            </Badge>
+          )}
+        </div>
+      </Card>
+    </section>
+  );
+}
+
 const INTEGRATION_GROUPS = [
   {
     id: "google",
@@ -451,7 +538,7 @@ export default function IntegrationsPage() {
   };
 
   const handleSave = () => {
-    const integrationSettings = allSettings?.filter((s) => s.section === "integrations" || s.section === "integrations_sheets") || [];
+    const integrationSettings = allSettings?.filter((s) => s.section === "integrations" || s.section === "integrations_sheets" || s.section === "integrations_google") || [];
     const toSave = integrationSettings.map((s) => ({
       key: s.key,
       value: localValues[s.key] ?? s.value,
@@ -461,7 +548,7 @@ export default function IntegrationsPage() {
     }));
     const newKeys = Object.keys(localValues).filter((k) => !integrationSettings.find((s) => s.key === k));
     for (const k of newKeys) {
-      const section = k.startsWith("google_sheet_") ? "integrations_sheets" : "integrations";
+      const section = k.startsWith("google_sheet_") ? "integrations_sheets" : k === "google_service_account_json" ? "integrations_google" : "integrations";
       toSave.push({ key: k, value: localValues[k], type: "text", section, label: k });
     }
     saveMutation.mutate(toSave);
@@ -560,6 +647,8 @@ export default function IntegrationsPage() {
             </section>
           );
         })}
+
+        <GoogleServiceAccountSection localValues={localValues} setLocal={setLocal} allSettings={allSettings} />
 
         <section>
           <h2 className="text-base font-semibold mb-1">Google Sheets Sync</h2>
