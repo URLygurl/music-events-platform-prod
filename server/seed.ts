@@ -8,6 +8,36 @@ export async function seedDatabase() {
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS username varchar UNIQUE`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash varchar`);
     await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS products (
+        id serial PRIMARY KEY,
+        name varchar NOT NULL,
+        description text,
+        price_cents integer NOT NULL DEFAULT 0,
+        currency varchar NOT NULL DEFAULT 'usd',
+        image_url text,
+        category varchar,
+        stock integer,
+        active boolean DEFAULT true,
+        sort_order integer DEFAULT 0,
+        created_at timestamp DEFAULT now()
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS orders (
+        id serial PRIMARY KEY,
+        stripe_session_id varchar UNIQUE,
+        stripe_payment_intent varchar,
+        customer_email varchar,
+        customer_name varchar,
+        line_items jsonb,
+        amount_total integer,
+        currency varchar DEFAULT 'usd',
+        status varchar NOT NULL DEFAULT 'pending',
+        metadata jsonb,
+        created_at timestamp DEFAULT now()
+      )
+    `);
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS activity_log (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id varchar NOT NULL,
