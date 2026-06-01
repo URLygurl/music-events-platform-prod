@@ -1,0 +1,916 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ChevronLeft,
+  Plus,
+  Check,
+  Trash2,
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Music,
+  Video,
+  Brain,
+  CreditCard,
+  Heart,
+  FileSpreadsheet,
+  Mail,
+  HardDrive,
+  FileText,
+  Send,
+  X,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Bot,
+  Sparkles,
+} from "lucide-react";
+import { SiYoutube, SiBandcamp } from "react-icons/si";
+import { useSettings } from "@/hooks/use-settings";
+import { useAuth } from "@/hooks/use-auth";
+import type { SiteSetting, MediaItem } from "@shared/schema";
+import { Link } from "wouter";
+
+function GoogleServiceAccountSection({
+  localValues,
+  setLocal,
+  allSettings,
+}: {
+  localValues: Record<string, string>;
+  setLocal: (k: string, v: string) => void;
+  allSettings?: SiteSetting[];
+}) {
+  const { toast } = useToast();
+  const [showJson, setShowJson] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; email?: string; error?: string } | null>(null);
+
+  const currentValue = localValues["google_service_account_json"] ?? (allSettings?.find(s => s.key === "google_service_account_json")?.value || "");
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await apiRequest("POST", "/api/google/test-connection");
+      const data = await res.json();
+      setTestResult(data);
+      if (data.ok) {
+        toast({ title: "Connected!", description: `Service account: ${data.email}` });
+      } else {
+        toast({ title: "Connection failed", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      setTestResult({ ok: false, error: "Request failed" });
+      toast({ title: "Error", description: "Could not reach the server.", variant: "destructive" });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <section>
+      <h2 className="text-base font-semibold mb-1">Google Service Account</h2>
+      <p className="text-xs text-muted-foreground mb-3">
+        Paste your Google Service Account JSON key here to enable Google Sheets sync, Google Docs, and Gmail. 
+        <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank" rel="noreferrer" className="underline ml-1">Get a key from Google Cloud Console</a>.
+      </p>
+      <Card className="p-4 space-y-3 overflow-visible">
+        <div className="space-y-1">
+          <Label className="text-xs">Service Account JSON</Label>
+          <div className="relative">
+            <Textarea
+              value={currentValue}
+              onChange={(e) => setLocal("google_service_account_json", e.target.value)}
+              placeholder='{"type": "service_account", "project_id": "...", "private_key": "..."}'
+              className={`font-mono text-xs min-h-[80px] ${!showJson && currentValue ? "blur-sm select-none" : ""}`}
+              data-testid="input-google-service-account-json"
+            />
+            {currentValue && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="absolute top-2 right-2"
+                onClick={() => setShowJson(!showJson)}
+              >
+                {showJson ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleTest}
+            disabled={testing || !currentValue}
+            data-testid="button-test-google-connection"
+          >
+            {testing ? "Testing..." : "Test Connection"}
+          </Button>
+          {testResult && (
+            <Badge variant={testResult.ok ? "default" : "destructive"} className="text-xs">
+              {testResult.ok ? `✓ ${testResult.email}` : `✗ ${testResult.error}`}
+            </Badge>
+          )}
+        </div>
+      </Card>
+    </section>
+  );
+}
+
+function AIConciergeSection({
+  localValues,
+  setLocal,
+  allSettings,
+}: {
+  localValues: Record<string, string>;
+  setLocal: (k: string, v: string) => void;
+  allSettings?: SiteSetting[];
+}) {
+  const getVal = (key: string, fallback = "") =>
+    localValues[key] ?? (allSettings?.find((s) => s.key === key)?.value || fallback);
+  const [showKey, setShowKey] = useState(false);
+
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-1">
+        <Bot className="w-4 h-4" />
+        <h2 className="text-base font-semibold">AI Festival Concierge</h2>
+      </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        A floating chat widget that acts as a music-savvy festival concierge for your visitors.
+        Configure its persona, knowledge sources, and behaviour below.
+      </p>
+      <Card className="p-4 space-y-4 overflow-visible">
+        {/* Enable / Public access */}
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-medium">Enable Concierge</Label>
+          <Switch
+            checked={getVal("concierge_enabled", "false") === "true"}
+            onCheckedChange={(v) => setLocal("concierge_enabled", v ? "true" : "false")}
+            data-testid="toggle-concierge-enabled"
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-xs font-medium">Public Access</Label>
+            <p className="text-xs text-muted-foreground">On = all visitors. Off = logged-in users only (saves tokens for large events)</p>
+          </div>
+          <Switch
+            checked={getVal("concierge_public", "false") === "true"}
+            onCheckedChange={(v) => setLocal("concierge_public", v ? "true" : "false")}
+            data-testid="toggle-concierge-public"
+          />
+        </div>
+
+        {/* Name */}
+        <div className="space-y-1">
+          <Label className="text-xs">Concierge Name</Label>
+          <Input
+            value={getVal("concierge_name")}
+            onChange={(e) => setLocal("concierge_name", e.target.value)}
+            placeholder="e.g. Ziggy, The Archivist, Riff..."
+            data-testid="input-concierge-name"
+          />
+        </div>
+
+        {/* Trivia frequency */}
+        <div className="space-y-1">
+          <Label className="text-xs">Trivia Frequency (minutes)</Label>
+          <Input
+            type="number"
+            min="5"
+            max="240"
+            value={getVal("concierge_trivia_mins", "60")}
+            onChange={(e) => setLocal("concierge_trivia_mins", e.target.value)}
+            placeholder="60"
+            data-testid="input-concierge-trivia-mins"
+          />
+          <p className="text-xs text-muted-foreground">How often to proactively share a trivia fact (or when asked)</p>
+        </div>
+
+        {/* API Provider + Key + Model */}
+        <div className="space-y-1">
+          <Label className="text-xs">AI Provider</Label>
+          <Select
+            value={getVal("concierge_provider", "openai")}
+            onValueChange={(v) => setLocal("concierge_provider", v)}
+          >
+            <SelectTrigger data-testid="select-concierge-provider">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="openai">OpenAI</SelectItem>
+              <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Model</Label>
+          <Select
+            value={getVal("concierge_model", "gpt-4o-mini")}
+            onValueChange={(v) => setLocal("concierge_model", v)}
+          >
+            <SelectTrigger data-testid="select-concierge-model">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gpt-4o-mini">GPT-4o Mini (fast, cheap)</SelectItem>
+              <SelectItem value="gpt-4o">GPT-4o (best quality)</SelectItem>
+              <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+              <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku (fast, cheap)</SelectItem>
+              <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (best quality)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">API Key (separate from general AI assistant)</Label>
+          <div className="relative">
+            <Input
+              type={showKey ? "text" : "password"}
+              value={getVal("concierge_api_key")}
+              onChange={(e) => setLocal("concierge_api_key", e.target.value)}
+              placeholder="sk-... or sk-ant-..."
+              data-testid="input-concierge-api-key"
+            />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute top-0 right-0 h-full"
+              onClick={() => setShowKey(!showKey)}
+              type="button"
+            >
+              {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Context URLs */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+            <Label className="text-xs font-medium">Context Sources (URLs the AI can pull from)</Label>
+          </div>
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Source {n}</Label>
+              <Input
+                value={getVal(`concierge_context_url_${n}`)}
+                onChange={(e) => setLocal(`concierge_context_url_${n}`, e.target.value)}
+                placeholder="https://..."
+                data-testid={`input-concierge-context-url-${n}`}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Skills */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-muted-foreground" />
+            <Label className="text-xs font-medium">Skills (SKILL.md-style instruction sets)</Label>
+          </div>
+          <p className="text-xs text-muted-foreground">Each skill is a named instruction set that shapes how the AI behaves. Customise per event type.</p>
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="space-y-1 border rounded-lg p-3">
+              <Label className="text-xs text-muted-foreground">Skill {n} Name</Label>
+              <Input
+                value={getVal(`concierge_skill_${n}_name`)}
+                onChange={(e) => setLocal(`concierge_skill_${n}_name`, e.target.value)}
+                placeholder={`e.g. Metal Historian, Jazz Sommelier, Festival Guide...`}
+                data-testid={`input-concierge-skill-${n}-name`}
+              />
+              <Label className="text-xs text-muted-foreground mt-2 block">Skill {n} Instructions</Label>
+              <Textarea
+                value={getVal(`concierge_skill_${n}_content`)}
+                onChange={(e) => setLocal(`concierge_skill_${n}_content`, e.target.value)}
+                placeholder={`# ${n === 1 ? 'Music Expert' : n === 2 ? 'Festival Guide' : 'Local Knowledge'}\nDescribe what this skill does and how the AI should behave...`}
+                className="font-mono text-xs min-h-[80px]"
+                data-testid={`input-concierge-skill-${n}-content`}
+              />
+            </div>
+          ))}
+        </div>
+      </Card>
+    </section>
+  );
+}
+
+const INTEGRATION_GROUPS = [
+  {
+    id: "google",
+    title: "Google Workspace",
+    description: "Connect Google services to manage documents, spreadsheets, and email",
+    items: [
+      { key: "int_google_drive_enabled", icon: HardDrive, name: "Google Drive", desc: "Access and manage files from Google Drive" },
+      { key: "int_google_sheets_enabled", icon: FileSpreadsheet, name: "Google Sheets", desc: "Read/write data from spreadsheets" },
+      { key: "int_google_docs_enabled", icon: FileText, name: "Google Docs", desc: "Create and edit documents" },
+      { key: "int_gmail_enabled", icon: Mail, name: "Gmail", desc: "Send notifications and emails" },
+    ],
+  },
+  {
+    id: "media",
+    title: "Music & Video Platforms",
+    description: "Connect music and video services for embedded playback",
+    items: [
+      { key: "int_youtube_enabled", icon: Video, name: "YouTube", desc: "Embed YouTube videos" },
+      { key: "int_spotify_enabled", icon: Music, name: "Spotify", desc: "Embed Spotify tracks, albums and playlists" },
+      { key: "int_bandcamp_enabled", icon: Music, name: "Bandcamp", desc: "Embed Bandcamp tracks and albums" },
+      { key: "int_apple_music_enabled", icon: Music, name: "Apple Music", desc: "Embed Apple Music tracks and albums" },
+    ],
+  },
+  {
+    id: "ai",
+    title: "AI Assistant",
+    description: "Add an AI chatbot powered by your own API key",
+    items: [],
+  },
+  {
+    id: "payments",
+    title: "Payments & Donations",
+    description: "Accept payments and donations from your audience",
+    items: [],
+  },
+];
+
+function IntegrationToggle({
+  settingKey,
+  label,
+  icon: Icon,
+  desc,
+  localValues,
+  setLocal,
+}: {
+  settingKey: string;
+  label: string;
+  icon: React.ElementType;
+  desc: string;
+  localValues: Record<string, string>;
+  setLocal: (k: string, v: string) => void;
+}) {
+  const { get } = useSettings();
+  const val = localValues[settingKey] ?? get(settingKey, "false");
+  const isOn = val === "true";
+
+  return (
+    <div className="flex items-center justify-between gap-3 py-3 border-b last:border-b-0">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-9 h-9 rounded-md border flex items-center justify-center flex-shrink-0">
+          <Icon className="w-4 h-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground truncate">{desc}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Badge variant={isOn ? "default" : "secondary"} className="text-xs">
+          {isOn ? "On" : "Off"}
+        </Badge>
+        <Switch
+          checked={isOn}
+          onCheckedChange={(v) => setLocal(settingKey, v ? "true" : "false")}
+          data-testid={`toggle-${settingKey}`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MediaManager() {
+  const { toast } = useToast();
+  const { data: mediaItems, isLoading } = useQuery<MediaItem[]>({
+    queryKey: ["/api/media"],
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async (data: { title: string; embedUrl: string; type: string; artist?: string }) => {
+      await apiRequest("POST", "/api/media", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/media"] });
+      toast({ title: "Added", description: "Media item added." });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/media/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/media"] });
+      toast({ title: "Deleted", description: "Media item removed." });
+    },
+  });
+
+  const [newTitle, setNewTitle] = useState("");
+  const [newUrl, setNewUrl] = useState("");
+  const [newType, setNewType] = useState("youtube");
+  const [newArtist, setNewArtist] = useState("");
+
+  const handleAdd = () => {
+    if (!newTitle || !newUrl) return;
+    addMutation.mutate({ title: newTitle, embedUrl: newUrl, type: newType, artist: newArtist || undefined });
+    setNewTitle("");
+    setNewUrl("");
+    setNewArtist("");
+  };
+
+  return (
+    <div className="space-y-4">
+      <h4 className="text-sm font-medium">Media Library</h4>
+      <p className="text-xs text-muted-foreground">
+        Add YouTube video URLs, Bandcamp embed links, or SoundCloud tracks. These will be playable inline on your site.
+      </p>
+
+      <Card className="p-4 space-y-3 overflow-visible">
+        <div className="grid grid-cols-1 gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Title</Label>
+            <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Track or video name" data-testid="input-media-title" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Artist</Label>
+            <Input value={newArtist} onChange={(e) => setNewArtist(e.target.value)} placeholder="Artist name (optional)" data-testid="input-media-artist" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Type</Label>
+            <Select value={newType} onValueChange={setNewType}>
+              <SelectTrigger data-testid="select-media-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="youtube">YouTube</SelectItem>
+                <SelectItem value="spotify">Spotify</SelectItem>
+                <SelectItem value="bandcamp">Bandcamp</SelectItem>
+                <SelectItem value="apple_music">Apple Music</SelectItem>
+                <SelectItem value="soundcloud">SoundCloud</SelectItem>
+                <SelectItem value="audio">Audio File</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">URL / Embed Link</Label>
+            <Input value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="https://..." data-testid="input-media-url" />
+          </div>
+          <Button onClick={handleAdd} disabled={!newTitle || !newUrl || addMutation.isPending} data-testid="button-add-media">
+            <Plus className="w-4 h-4 mr-1" /> Add Media
+          </Button>
+        </div>
+      </Card>
+
+      {isLoading ? (
+        <Skeleton className="h-20 w-full" />
+      ) : mediaItems?.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-4">No media items yet</p>
+      ) : (
+        <div className="space-y-2">
+          {mediaItems?.map((item) => (
+            <Card key={item.id} className="p-3 flex items-center justify-between gap-2 overflow-visible" data-testid={`media-item-${item.id}`}>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-md border flex items-center justify-center flex-shrink-0">
+                  {item.type === "youtube" ? <Video className="w-3.5 h-3.5" /> : <Music className="w-3.5 h-3.5" />}
+                  {/* spotify, apple_music, bandcamp, soundcloud all use Music icon */}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{item.title}</p>
+                  <p className="text-xs text-muted-foreground truncate">{item.artist || item.type}</p>
+                </div>
+              </div>
+              <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(item.id)} data-testid={`button-delete-media-${item.id}`}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AISection({
+  localValues,
+  setLocal,
+}: {
+  localValues: Record<string, string>;
+  setLocal: (k: string, v: string) => void;
+}) {
+  const { get } = useSettings();
+  const [showKey, setShowKey] = useState(false);
+
+  const enabled = (localValues["int_ai_enabled"] ?? get("int_ai_enabled", "false")) === "true";
+  const provider = localValues["int_ai_provider"] ?? get("int_ai_provider", "openai");
+  const apiKey = localValues["int_ai_api_key"] ?? get("int_ai_api_key", "");
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Brain className="w-5 h-5" />
+          <span className="text-sm font-medium">AI Assistant</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={enabled ? "default" : "secondary"} className="text-xs">
+            {enabled ? "Active" : "Inactive"}
+          </Badge>
+          <Switch
+            checked={enabled}
+            onCheckedChange={(v) => setLocal("int_ai_enabled", v ? "true" : "false")}
+            data-testid="toggle-int_ai_enabled"
+          />
+        </div>
+      </div>
+
+      {enabled && (
+        <Card className="p-4 space-y-3 overflow-visible">
+          <p className="text-xs text-muted-foreground">
+            Bring your own API key. The AI assistant will be available to users on the site.
+          </p>
+          <div className="space-y-1">
+            <Label className="text-xs">Provider</Label>
+            <Select value={provider} onValueChange={(v) => setLocal("int_ai_provider", v)}>
+              <SelectTrigger data-testid="select-ai-provider">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openai">OpenAI (GPT)</SelectItem>
+                <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">API Key</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type={showKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(e) => setLocal("int_ai_api_key", e.target.value)}
+                placeholder={provider === "openai" ? "sk-..." : "sk-ant-..."}
+                className="flex-1"
+                data-testid="input-ai-api-key"
+              />
+              <Button size="icon" variant="ghost" onClick={() => setShowKey(!showKey)}>
+                {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function PaymentsSection({
+  localValues,
+  setLocal,
+}: {
+  localValues: Record<string, string>;
+  setLocal: (k: string, v: string) => void;
+}) {
+  const { get } = useSettings();
+  const [showSecret, setShowSecret] = useState(false);
+  const [showWebhook, setShowWebhook] = useState(false);
+
+  const stripeEnabled = (localValues["int_stripe_enabled"] ?? get("int_stripe_enabled", "false")) === "true";
+  const stripePubKey = localValues["stripe_publishable_key"] ?? get("stripe_publishable_key", "");
+  const stripeSecretKey = localValues["stripe_secret_key"] ?? get("stripe_secret_key", "");
+  const stripeWebhookSecret = localValues["stripe_webhook_secret"] ?? get("stripe_webhook_secret", "");
+  const donationsEnabled = (localValues["int_donations_enabled"] ?? get("int_donations_enabled", "false")) === "true";
+  const donationsTitle = localValues["int_donations_title"] ?? get("int_donations_title", "Support Our Mission");
+  const donationsDesc = localValues["int_donations_description"] ?? get("int_donations_description", "Your support helps us keep the music alive.");
+  const donationsAmounts = localValues["int_donations_amounts"] ?? get("int_donations_amounts", "5,10,25,50,100");
+
+  const isLive = stripePubKey.startsWith("pk_live") || stripeSecretKey.startsWith("sk_live");
+  const isConfigured = stripePubKey.startsWith("pk_") && stripeSecretKey.startsWith("sk_");
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5" />
+            <span className="text-sm font-medium">Stripe Payments</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {isConfigured ? (
+              <Badge variant={isLive ? "default" : "secondary"} className="text-xs">
+                {isLive ? "Live" : "Test Mode"}
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="text-xs">Not Configured</Badge>
+            )}
+            <Switch
+              checked={stripeEnabled}
+              onCheckedChange={(v) => setLocal("int_stripe_enabled", v ? "true" : "false")}
+              data-testid="toggle-int_stripe_enabled"
+            />
+          </div>
+        </div>
+        {stripeEnabled && (
+          <Card className="p-4 space-y-3 overflow-visible">
+            <p className="text-xs text-muted-foreground">
+              Paste your Stripe keys below. Find them in your{" "}
+              <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="underline">Stripe Dashboard → API Keys</a>.
+              The Shop and Donations pages will automatically use Stripe Hosted Checkout once keys are saved.
+            </p>
+            <div className="space-y-1">
+              <Label className="text-xs">Publishable Key (pk_...)</Label>
+              <Input
+                value={stripePubKey}
+                onChange={(e) => setLocal("stripe_publishable_key", e.target.value)}
+                placeholder="pk_test_... or pk_live_..."
+                data-testid="input-stripe-publishable-key"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Secret Key (sk_...)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type={showSecret ? "text" : "password"}
+                  value={stripeSecretKey}
+                  onChange={(e) => setLocal("stripe_secret_key", e.target.value)}
+                  placeholder="sk_test_... or sk_live_..."
+                  className="flex-1"
+                  data-testid="input-stripe-secret-key"
+                />
+                <Button size="icon" variant="ghost" onClick={() => setShowSecret(!showSecret)}>
+                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Webhook Secret (optional — whsec_...)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type={showWebhook ? "text" : "password"}
+                  value={stripeWebhookSecret}
+                  onChange={(e) => setLocal("stripe_webhook_secret", e.target.value)}
+                  placeholder="whsec_..."
+                  className="flex-1"
+                  data-testid="input-stripe-webhook-secret"
+                />
+                <Button size="icon" variant="ghost" onClick={() => setShowWebhook(!showWebhook)}>
+                  {showWebhook ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Webhook URL: <code className="text-xs">/api/stripe/webhook</code> — add this in your Stripe Dashboard → Webhooks.</p>
+            </div>
+          </Card>
+        )}
+      </div>
+
+      <div className="border-t pt-4">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <Heart className="w-5 h-5" />
+            <span className="text-sm font-medium">Donations</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant={donationsEnabled ? "default" : "secondary"} className="text-xs">
+              {donationsEnabled ? "Active" : "Off"}
+            </Badge>
+            <Switch
+              checked={donationsEnabled}
+              onCheckedChange={(v) => setLocal("int_donations_enabled", v ? "true" : "false")}
+              data-testid="toggle-int_donations_enabled"
+            />
+          </div>
+        </div>
+        {donationsEnabled && (
+          <Card className="p-4 space-y-3 overflow-visible">
+            <p className="text-xs text-muted-foreground">
+              Enable a donation page where supporters can contribute. When Stripe keys are configured, donations go through Stripe Hosted Checkout. Without Stripe, donations are logged for manual processing.
+            </p>
+            <div className="space-y-1">
+              <Label className="text-xs">Page Title</Label>
+              <Input
+                value={donationsTitle}
+                onChange={(e) => setLocal("int_donations_title", e.target.value)}
+                data-testid="input-donations-title"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Description</Label>
+              <Textarea
+                value={donationsDesc}
+                onChange={(e) => setLocal("int_donations_description", e.target.value)}
+                rows={2}
+                className="resize-none"
+                data-testid="input-donations-desc"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Suggested Amounts (comma-separated)</Label>
+              <Input
+                value={donationsAmounts}
+                onChange={(e) => setLocal("int_donations_amounts", e.target.value)}
+                placeholder="5,10,25,50,100"
+                data-testid="input-donations-amounts"
+              />
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function IntegrationsPage() {
+  const { toast } = useToast();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const [localValues, setLocalValues] = useState<Record<string, string>>({});
+
+  const { data: allSettings, isLoading } = useQuery<SiteSetting[]>({
+    queryKey: ["/api/settings"],
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (settings: { key: string; value: string; type: string; section: string; label: string }[]) => {
+      await apiRequest("PUT", "/api/settings", { settings });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({ title: "Saved", description: "Integration settings saved." });
+      setLocalValues({});
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save.", variant: "destructive" });
+    },
+  });
+
+  const setLocal = (key: string, val: string) => {
+    setLocalValues((prev) => ({ ...prev, [key]: val }));
+  };
+
+  const handleSave = () => {
+    const integrationSettings = allSettings?.filter((s) => s.section === "integrations" || s.section === "integrations_sheets" || s.section === "integrations_google" || s.section === "integrations_concierge") || [];
+    const toSave = integrationSettings.map((s) => ({
+      key: s.key,
+      value: localValues[s.key] ?? s.value,
+      type: s.type,
+      section: s.section,
+      label: s.label,
+    }));
+    const newKeys = Object.keys(localValues).filter((k) => !integrationSettings.find((s) => s.key === k));
+    for (const k of newKeys) {
+      const section = k.startsWith("google_sheet_") ? "integrations_sheets" : k === "google_service_account_json" ? "integrations_google" : k.startsWith("concierge_") ? "integrations_concierge" : "integrations";
+      toSave.push({ key: k, value: localValues[k], type: "text", section, label: k });
+    }
+    saveMutation.mutate(toSave);
+  };
+
+  const hasChanges = Object.keys(localValues).length > 0;
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-4 max-w-lg mx-auto space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="p-6 max-w-sm w-full text-center space-y-4">
+          <h2 className="text-lg font-semibold">Admin Access Required</h2>
+          <p className="text-sm text-muted-foreground">
+            {!user ? "Please log in with an admin account." : "You do not have admin access."}
+          </p>
+          {!user && (
+            <Link href="/login">
+              <Button data-testid="button-integrations-login">Log In</Button>
+            </Link>
+          )}
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="sticky top-0 z-50 border-b bg-background px-4 py-3">
+        <div className="max-w-lg mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Link href="/admin">
+              <Button size="icon" variant="ghost" data-testid="button-back-admin">
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+            </Link>
+            <h1 className="text-sm font-semibold">Integrations</h1>
+          </div>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!hasChanges || saveMutation.isPending}
+            data-testid="button-save-integrations"
+          >
+            <Check className="w-3 h-3 mr-1" />
+            {saveMutation.isPending ? "Saving..." : "Save All"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 py-4 space-y-8 pb-24">
+        {INTEGRATION_GROUPS.map((group) => {
+          if (group.id === "ai") {
+            return (
+              <section key={group.id}>
+                <p className="text-xs text-muted-foreground mb-3">{group.description}</p>
+                <AISection localValues={localValues} setLocal={setLocal} />
+              </section>
+            );
+          }
+
+          if (group.id === "payments") {
+            return (
+              <section key={group.id}>
+                <p className="text-xs text-muted-foreground mb-3">{group.description}</p>
+                <PaymentsSection localValues={localValues} setLocal={setLocal} />
+              </section>
+            );
+          }
+
+          return (
+            <section key={group.id}>
+              <h2 className="text-base font-semibold mb-1">{group.title}</h2>
+              <p className="text-xs text-muted-foreground mb-3">{group.description}</p>
+              <Card className="px-4 overflow-visible">
+                {group.items.map((item) => (
+                  <IntegrationToggle
+                    key={item.key}
+                    settingKey={item.key}
+                    label={item.name}
+                    icon={item.icon}
+                    desc={item.desc}
+                    localValues={localValues}
+                    setLocal={setLocal}
+                  />
+                ))}
+              </Card>
+            </section>
+          );
+        })}
+
+         <GoogleServiceAccountSection localValues={localValues} setLocal={setLocal} allSettings={allSettings} />
+
+        {/* AI Concierge Settings */}
+        <AIConciergeSection localValues={localValues} setLocal={setLocal} allSettings={allSettings} />
+
+        <section>
+          <h2 className="text-base font-semibold mb-1">Google Sheets Sync</h2>
+          <p className="text-xs text-muted-foreground mb-3">
+            Connect form submissions and donations to Google Sheets. Enter the Spreadsheet ID followed by a pipe and sheet name (e.g. <code className="text-xs">1BxiMVs0XRA5nFMdK...|Sheet1</code>).
+          </p>
+          <Card className="p-4 space-y-3 overflow-visible">
+            <div className="space-y-1">
+              <Label className="text-xs">Enquiries Sheet</Label>
+              <Input
+                value={localValues["google_sheet_enquiries"] ?? (allSettings?.find(s => s.key === "google_sheet_enquiries")?.value || "")}
+                onChange={(e) => setLocal("google_sheet_enquiries", e.target.value)}
+                placeholder="SpreadsheetID|SheetName"
+                data-testid="input-sheet-enquiries"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Donations Sheet</Label>
+              <Input
+                value={localValues["google_sheet_donations"] ?? (allSettings?.find(s => s.key === "google_sheet_donations")?.value || "")}
+                onChange={(e) => setLocal("google_sheet_donations", e.target.value)}
+                placeholder="SpreadsheetID|SheetName"
+                data-testid="input-sheet-donations"
+              />
+            </div>
+          </Card>
+        </section>
+
+        <section>
+          <h2 className="text-base font-semibold mb-1">Media Player</h2>
+          <p className="text-xs text-muted-foreground mb-3">
+            Manage your media library. Items added here can be played inline by visitors.
+          </p>
+          <MediaManager />
+        </section>
+      </div>
+    </div>
+  );
+}

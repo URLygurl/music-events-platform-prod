@@ -1,0 +1,237 @@
+import { db } from "./db";
+import { artists, events, siteSettings } from "@shared/schema";
+import { sql } from "drizzle-orm";
+
+export async function seedDatabase() {
+  // Inline schema migrations — safe to run on every startup
+  try {
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS username varchar UNIQUE`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash varchar`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS products (
+        id integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        name text NOT NULL,
+        description text,
+        image_url text,
+        price integer NOT NULL DEFAULT 0,
+        currency text NOT NULL DEFAULT 'nzd',
+        category text DEFAULT 'general',
+        stock integer,
+        active boolean DEFAULT true,
+        stripe_price_id text,
+        stripe_product_id text,
+        sort_order integer DEFAULT 0,
+        created_at timestamp DEFAULT now()
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS orders (
+        id integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        stripe_session_id text UNIQUE,
+        stripe_payment_intent_id text,
+        customer_email text,
+        customer_name text,
+        amount_total integer,
+        currency text DEFAULT 'nzd',
+        status text DEFAULT 'pending',
+        items text,
+        metadata text,
+        created_at timestamp DEFAULT now()
+      )
+    `);
+    // Fix column name if table was created with wrong name in a previous deploy
+    try {
+      await db.execute(sql`ALTER TABLE products RENAME COLUMN price_cents TO price`);
+    } catch (_) { /* column already correct or doesn't exist */ }
+    try {
+      await db.execute(sql`ALTER TABLE orders RENAME COLUMN stripe_payment_intent TO stripe_payment_intent_id`);
+    } catch (_) { /* column already correct or doesn't exist */ }
+    try {
+      await db.execute(sql`ALTER TABLE orders RENAME COLUMN line_items TO items`);
+    } catch (_) { /* column already correct or doesn't exist */ }
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS activity_log (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id varchar NOT NULL,
+        user_email varchar,
+        user_name varchar,
+        user_role varchar,
+        action varchar NOT NULL,
+        resource varchar,
+        resource_id varchar,
+        description text,
+        metadata jsonb,
+        ip_address varchar,
+        created_at timestamp DEFAULT now()
+      )
+    `);
+    console.log("[seed] Schema migrations applied successfully");
+  } catch (err) {
+    console.error("[seed] Migration warning (may already exist):", err);
+  }
+
+  const [existingArtists] = await db.select({ count: sql<number>`count(*)` }).from(artists);
+  if (!existingArtists || Number(existingArtists.count) === 0) {
+    console.log("Seeding artists & events...");
+    await db.insert(artists).values([
+      { name: "DJ Momentum", genre: "House / Deep House", description: "DJ Momentum brings pulsating deep house rhythms that move the crowd from the first beat. Known for seamless transitions and an instinct for the dancefloor, Momentum has played at festivals across the country.", imageUrl: "", email: "momentum@example.com", phone: "+1 555-0101", socialLinks: "https://instagram.com/djmomentum", timeSlot: "22:00 - 00:00", featured: true, promoterImageUrl: "" },
+      { name: "Vox Luna", genre: "Indie Pop / Electronic", description: "Vox Luna blends ethereal vocals with electronic beats to create a dreamy sonic landscape. Her live performances weave looping and layering into a captivating one-woman show.", imageUrl: "", email: "voxluna@example.com", phone: "+1 555-0102", socialLinks: "https://instagram.com/voxluna", timeSlot: "20:00 - 21:30", featured: true, promoterImageUrl: "" },
+      { name: "The Brass Assembly", genre: "Jazz / Funk", description: "A seven-piece brass ensemble that fuses classic jazz with modern funk grooves. The Brass Assembly brings high energy and tight arrangements to every performance.", imageUrl: "", email: "brass@example.com", phone: "+1 555-0103", socialLinks: "https://instagram.com/brassassembly", timeSlot: "18:00 - 19:30", featured: true, promoterImageUrl: "" },
+      { name: "Neon Pulse", genre: "Synthwave / Retro", description: "Neon Pulse takes audiences on a journey through retro-futuristic soundscapes. Combining analogue synths with modern production, each set feels like a soundtrack to a film that hasn't been made yet.", imageUrl: "", email: "neonpulse@example.com", phone: "+1 555-0104", socialLinks: "https://instagram.com/neonpulse", timeSlot: "00:00 - 02:00", featured: true, promoterImageUrl: "" },
+      { name: "Roots Collective", genre: "Reggae / Dub", description: "Roots Collective brings authentic reggae and dub vibrations with live instrumentation.", imageUrl: "", email: "roots@example.com", phone: "+1 555-0105", socialLinks: "https://instagram.com/rootscollective", timeSlot: "16:00 - 17:30", featured: false, promoterImageUrl: "" },
+      { name: "MC Frequency", genre: "Hip Hop / Spoken Word", description: "MC Frequency delivers sharp lyricism and powerful spoken word over original beats.", imageUrl: "", email: "frequency@example.com", phone: "+1 555-0106", socialLinks: "https://instagram.com/mcfrequency", timeSlot: "19:30 - 20:00", featured: false, promoterImageUrl: "" },
+      { name: "Aurora Keys", genre: "Classical Crossover", description: "Aurora Keys reimagines classical piano pieces with electronic arrangements.", imageUrl: "", email: "aurora@example.com", phone: "+1 555-0107", socialLinks: "https://instagram.com/aurorakeys", timeSlot: "15:00 - 16:00", featured: false, promoterImageUrl: "" },
+      { name: "Bass Theory", genre: "Drum & Bass / Jungle", description: "Bass Theory delivers relentless drum and bass sets that push the boundaries of tempo and texture.", imageUrl: "", email: "basstheory@example.com", phone: "+1 555-0108", socialLinks: "https://instagram.com/basstheory", timeSlot: "02:00 - 04:00", featured: false, promoterImageUrl: "" },
+    ]);
+    await db.insert(events).values([
+      { name: "Summer Sound Festival 2026", description: "A full day of live music across three stages.", imageUrl: "", date: "July 15, 2026", venue: "Riverside Park Amphitheatre" },
+      { name: "Midnight Sessions", description: "An intimate late-night electronic music showcase.", imageUrl: "", date: "August 22, 2026", venue: "The Warehouse, Downtown" },
+    ]);
+  }
+
+  const [existingSettings] = await db.select({ count: sql<number>`count(*)` }).from(siteSettings);
+  if (!existingSettings || Number(existingSettings.count) === 0) {
+    console.log("Seeding default settings...");
+    await db.insert(siteSettings).values([
+      { key: "menu_show_home", value: "true", type: "toggle", section: "navigation", label: "Show Home in Menu" },
+      { key: "menu_show_artists", value: "true", type: "toggle", section: "navigation", label: "Show Artists in Menu" },
+      { key: "menu_show_events", value: "true", type: "toggle", section: "navigation", label: "Show Events in Menu" },
+      { key: "menu_show_ds", value: "true", type: "toggle", section: "navigation", label: "Show DS in Menu" },
+      { key: "menu_show_profile", value: "true", type: "toggle", section: "navigation", label: "Show Profile in Menu" },
+      { key: "menu_show_donate", value: "true", type: "toggle", section: "navigation", label: "Show Donate in Menu" },
+      { key: "menu_show_admin", value: "true", type: "toggle", section: "navigation", label: "Show Admin in Menu" },
+      { key: "menu_show_integrations", value: "true", type: "toggle", section: "navigation", label: "Show Integrations in Menu" },
+      { key: "global_company_name", value: "[ Company Name ]", type: "text", section: "global", label: "Company Name" },
+      { key: "global_logo_image", value: "", type: "image", section: "global", label: "Logo / Header Image" },
+      { key: "global_primary_color", value: "#000000", type: "color", section: "style", label: "Primary Color" },
+      { key: "global_secondary_color", value: "#ffffff", type: "color", section: "style", label: "Secondary Color" },
+      { key: "global_accent_color", value: "#666666", type: "color", section: "style", label: "Accent Color" },
+      { key: "global_font_heading", value: "Inter", type: "font", section: "style", label: "Heading Font" },
+      { key: "global_font_body", value: "Inter", type: "font", section: "style", label: "Body Font" },
+      { key: "login_welcome_text", value: "Welcome", type: "text", section: "login", label: "Welcome Heading" },
+      { key: "login_subtitle", value: "Sign in to access the platform", type: "text", section: "login", label: "Subtitle" },
+      { key: "login_header_image", value: "", type: "image", section: "login", label: "Header Image" },
+      { key: "landing_heading_text", value: "[ Heading Text ]", type: "text", section: "landing", label: "Heading Banner Text" },
+      { key: "landing_search_placeholder", value: "Search artists...", type: "text", section: "landing", label: "Search Placeholder" },
+      { key: "landing_banner_image", value: "", type: "image", section: "landing", label: "Bottom Banner Image" },
+      { key: "landing_enquiry_title", value: "Enquire / Subscribe", type: "text", section: "landing", label: "Enquiry Section Title" },
+      { key: "landing_show_enquiry", value: "true", type: "toggle", section: "landing", label: "Show Enquiry Form" },
+      { key: "landing_show_table", value: "true", type: "toggle", section: "landing", label: "Show Info Table" },
+      { key: "landing_table_header", value: "[ Table Header ]", type: "text", section: "landing", label: "Table Header Text" },
+      { key: "landing_table_col1_show", value: "true", type: "toggle", section: "landing", label: "Show Column 1" },
+      { key: "landing_table_col1_header", value: "Column 1", type: "text", section: "landing", label: "Column 1 Header" },
+      { key: "landing_table_col2_show", value: "true", type: "toggle", section: "landing", label: "Show Column 2" },
+      { key: "landing_table_col2_header", value: "Column 2", type: "text", section: "landing", label: "Column 2 Header" },
+      { key: "landing_table_col3_show", value: "true", type: "toggle", section: "landing", label: "Show Column 3" },
+      { key: "landing_table_col3_header", value: "Column 3", type: "text", section: "landing", label: "Column 3 Header" },
+      { key: "landing_table_col4_show", value: "true", type: "toggle", section: "landing", label: "Show Column 4" },
+      { key: "landing_table_col4_header", value: "Column 4", type: "text", section: "landing", label: "Column 4 Header" },
+      { key: "artists_page_title", value: "Artists", type: "text", section: "artists_dir", label: "Page Title" },
+      { key: "events_page_title", value: "Events", type: "text", section: "events", label: "Page Title" },
+      { key: "shop_page_title", value: "Shop", type: "text", section: "shop_page", label: "Page Title" },
+      { key: "shop_page_subtitle", value: "", type: "text", section: "shop_page", label: "Subtitle / Description" },
+      { key: "shop_page_empty_text", value: "No products available", type: "text", section: "shop_page", label: "Empty State Text" },
+      { key: "ds_page_title", value: "DS", type: "text", section: "ds", label: "Page Title" },
+      { key: "ds_content_text", value: "[ DS content area — customisable ]", type: "text", section: "ds", label: "Content Text" },
+      { key: "ds_content_image", value: "", type: "image", section: "ds", label: "Content Image" },
+      { key: "nav_home_label", value: "Home", type: "text", section: "navigation", label: "Home Button Label" },
+      { key: "nav_artists_label", value: "Artists", type: "text", section: "navigation", label: "Artists Button Label" },
+      { key: "nav_events_label", value: "Events", type: "text", section: "navigation", label: "Events Button Label" },
+      { key: "nav_ds_label", value: "DS", type: "text", section: "navigation", label: "DS Button Label" },
+      { key: "nav_profile_label", value: "Profile", type: "text", section: "navigation", label: "Profile Button Label" },
+    ]);
+  }
+
+  const requiredSettings = [
+    { key: "menu_show_home", value: "true", type: "toggle", section: "navigation", label: "Show Home in Menu" },
+    { key: "menu_show_artists", value: "true", type: "toggle", section: "navigation", label: "Show Artists in Menu" },
+    { key: "menu_show_events", value: "true", type: "toggle", section: "navigation", label: "Show Events in Menu" },
+    { key: "menu_show_ds", value: "true", type: "toggle", section: "navigation", label: "Show DS in Menu" },
+    { key: "menu_show_profile", value: "true", type: "toggle", section: "navigation", label: "Show Profile in Menu" },
+    { key: "menu_show_donate", value: "true", type: "toggle", section: "navigation", label: "Show Donate in Menu" },
+    { key: "menu_show_admin", value: "true", type: "toggle", section: "navigation", label: "Show Admin in Menu" },
+    { key: "menu_show_integrations", value: "true", type: "toggle", section: "navigation", label: "Show Integrations in Menu" },
+    { key: "google_sheet_enquiries", value: "", type: "text", section: "integrations_sheets", label: "Enquiries Sheet (ID|SheetName)" },
+    { key: "google_sheet_donations", value: "", type: "text", section: "integrations_sheets", label: "Donations Sheet (ID|SheetName)" },
+    { key: "bg_landing", value: "", type: "image", section: "wallpapers", label: "Landing Page Background" },
+    { key: "bg_artists", value: "", type: "image", section: "wallpapers", label: "Artists Page Background" },
+    { key: "bg_events", value: "", type: "image", section: "wallpapers", label: "Events Page Background" },
+    { key: "bg_ds", value: "", type: "image", section: "wallpapers", label: "DS Page Background" },
+    { key: "bg_login", value: "", type: "image", section: "wallpapers", label: "Login Page Background" },
+    { key: "bg_shop", value: "", type: "image", section: "wallpapers", label: "Shop Page Background" },
+    { key: "bg_landing_table", value: "", type: "image", section: "wallpapers", label: "Landing Table Background" },
+    { key: "landing_show_enquiry", value: "true", type: "toggle", section: "landing", label: "Show Enquiry Form" },
+    { key: "landing_show_table", value: "true", type: "toggle", section: "landing", label: "Show Info Table" },
+    { key: "landing_table_header", value: "[ Table Header ]", type: "text", section: "landing", label: "Table Header Text" },
+    { key: "landing_table_col1_show", value: "true", type: "toggle", section: "landing", label: "Show Column 1" },
+    { key: "landing_table_col1_header", value: "Column 1", type: "text", section: "landing", label: "Column 1 Header" },
+    { key: "landing_table_col2_show", value: "true", type: "toggle", section: "landing", label: "Show Column 2" },
+    { key: "landing_table_col2_header", value: "Column 2", type: "text", section: "landing", label: "Column 2 Header" },
+    { key: "landing_table_col3_show", value: "true", type: "toggle", section: "landing", label: "Show Column 3" },
+    { key: "landing_table_col3_header", value: "Column 3", type: "text", section: "landing", label: "Column 3 Header" },
+    { key: "landing_table_col4_show", value: "true", type: "toggle", section: "landing", label: "Show Column 4" },
+    { key: "landing_table_col4_header", value: "Column 4", type: "text", section: "landing", label: "Column 4 Header" },
+    { key: "landing_table_r1c1", value: "", type: "text", section: "landing", label: "Row 1, Col 1" },
+    { key: "landing_table_r1c2", value: "", type: "text", section: "landing", label: "Row 1, Col 2" },
+    { key: "landing_table_r1c3", value: "", type: "text", section: "landing", label: "Row 1, Col 3" },
+    { key: "landing_table_r1c4", value: "", type: "text", section: "landing", label: "Row 1, Col 4" },
+    { key: "landing_table_r2c1", value: "", type: "text", section: "landing", label: "Row 2, Col 1" },
+    { key: "landing_table_r2c2", value: "", type: "text", section: "landing", label: "Row 2, Col 2" },
+    { key: "landing_table_r2c3", value: "", type: "text", section: "landing", label: "Row 2, Col 3" },
+    { key: "landing_table_r2c4", value: "", type: "text", section: "landing", label: "Row 2, Col 4" },
+    { key: "landing_table_r3c1", value: "", type: "text", section: "landing", label: "Row 3, Col 1" },
+    { key: "landing_table_r3c2", value: "", type: "text", section: "landing", label: "Row 3, Col 2" },
+    { key: "landing_table_r3c3", value: "", type: "text", section: "landing", label: "Row 3, Col 3" },
+    { key: "landing_table_r3c4", value: "", type: "text", section: "landing", label: "Row 3, Col 4" },
+    { key: "landing_table_r4c1", value: "", type: "text", section: "landing", label: "Row 4, Col 1" },
+    { key: "landing_table_r4c2", value: "", type: "text", section: "landing", label: "Row 4, Col 2" },
+    { key: "landing_table_r4c3", value: "", type: "text", section: "landing", label: "Row 4, Col 3" },
+    { key: "landing_table_r4c4", value: "", type: "text", section: "landing", label: "Row 4, Col 4" },
+    { key: "landing_table_r5c1", value: "", type: "text", section: "landing", label: "Row 5, Col 1" },
+    { key: "landing_table_r5c2", value: "", type: "text", section: "landing", label: "Row 5, Col 2" },
+    { key: "landing_table_r5c3", value: "", type: "text", section: "landing", label: "Row 5, Col 3" },
+    { key: "landing_table_r5c4", value: "", type: "text", section: "landing", label: "Row 5, Col 4" },
+    { key: "landing_table_r6c1", value: "", type: "text", section: "landing", label: "Row 6, Col 1" },
+    { key: "landing_table_r6c2", value: "", type: "text", section: "landing", label: "Row 6, Col 2" },
+    { key: "landing_table_r6c3", value: "", type: "text", section: "landing", label: "Row 6, Col 3" },
+    { key: "landing_table_r6c4", value: "", type: "text", section: "landing", label: "Row 6, Col 4" },
+    { key: "shop_page_title", value: "Shop", type: "text", section: "shop_page", label: "Page Title" },
+    { key: "shop_page_subtitle", value: "", type: "text", section: "shop_page", label: "Subtitle / Description" },
+    { key: "shop_page_empty_text", value: "No products available", type: "text", section: "shop_page", label: "Empty State Text" },
+    { key: "menu_show_shop", value: "false", type: "toggle", section: "navigation", label: "Show Shop in Hamburger Menu" },
+    { key: "nav_show_shop", value: "false", type: "toggle", section: "navigation", label: "Show Shop in Bottom Nav" },
+    { key: "nav_shop_label", value: "Shop", type: "text", section: "navigation", label: "Shop Button Label" },
+    { key: "nav_show_donate", value: "false", type: "toggle", section: "navigation", label: "Show Donate in Bottom Nav" },
+    { key: "nav_donate_label", value: "Donate", type: "text", section: "navigation", label: "Donate Button Label" },
+    { key: "nav_show_home", value: "true", type: "toggle", section: "navigation", label: "Show Home in Bottom Nav" },
+    { key: "nav_show_artists", value: "true", type: "toggle", section: "navigation", label: "Show Artists in Bottom Nav" },
+    { key: "nav_show_events", value: "true", type: "toggle", section: "navigation", label: "Show Events in Bottom Nav" },
+    { key: "nav_show_ds", value: "true", type: "toggle", section: "navigation", label: "Show DS in Bottom Nav" },
+    { key: "custom_font_name", value: "", type: "text", section: "style", label: "Custom Font Name" },
+    { key: "custom_font_url", value: "", type: "text", section: "style", label: "Custom Font File URL" },
+    { key: "social_instagram", value: "", type: "text", section: "social", label: "Instagram URL" },
+    { key: "social_facebook", value: "", type: "text", section: "social", label: "Facebook URL" },
+    { key: "social_twitter", value: "", type: "text", section: "social", label: "X (Twitter) URL" },
+    { key: "social_tiktok", value: "", type: "text", section: "social", label: "TikTok URL" },
+    { key: "social_youtube", value: "", type: "text", section: "social", label: "YouTube URL" },
+    { key: "social_soundcloud", value: "", type: "text", section: "social", label: "SoundCloud URL" },
+    { key: "social_spotify", value: "", type: "text", section: "social", label: "Spotify URL" },
+    { key: "social_bandcamp", value: "", type: "text", section: "social", label: "Bandcamp URL" },
+    { key: "social_website", value: "", type: "text", section: "social", label: "Website URL" },
+    { key: "social_email", value: "", type: "text", section: "social", label: "Contact Email" },
+    { key: "anim_box_1_text", value: "", type: "text", section: "animations", label: "Animation Box 1 Text" },
+    { key: "anim_box_1_style", value: "fade-in", type: "text", section: "animations", label: "Animation Box 1 Style" },
+    { key: "anim_box_1_bg", value: "", type: "image", section: "animations", label: "Animation Box 1 Background" },
+    { key: "anim_box_2_text", value: "", type: "text", section: "animations", label: "Animation Box 2 Text" },
+    { key: "anim_box_2_style", value: "slide-up", type: "text", section: "animations", label: "Animation Box 2 Style" },
+    { key: "anim_box_2_bg", value: "", type: "image", section: "animations", label: "Animation Box 2 Background" },
+    { key: "anim_box_3_text", value: "", type: "text", section: "animations", label: "Animation Box 3 Text" },
+    { key: "anim_box_3_style", value: "slide-left", type: "text", section: "animations", label: "Animation Box 3 Style" },
+    { key: "anim_box_3_bg", value: "", type: "image", section: "animations", label: "Animation Box 3 Background" },
+  ];
+  for (const s of requiredSettings) {
+    await db.insert(siteSettings).values(s).onConflictDoNothing({ target: siteSettings.key });
+  }
+
+  console.log("Seeding complete.");
+}
