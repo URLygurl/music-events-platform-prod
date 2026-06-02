@@ -1,17 +1,45 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema, insertDsClientSchema, insertProductSchema } from "@shared/schema";
-import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin, logActivity } from "./auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin, logActivity, getSessionUser } from "./auth";
 import { db } from "./db";
 import { activityLog } from "@shared/models/auth";
 import { desc } from "drizzle-orm";
 import Stripe from "stripe";
-import { appendToSheet, isGoogleSheetsConfigured, testGoogleSheetsConnection } from "./google-sheets";
+import { appendToSheet, isGoogleSheetsConnected, testGoogleSheetsConnection } from "./google-sheets";
 import { getConciergeSettings, buildSystemPrompt, callConciergeAI, generateArtistData } from "./concierge";
 import multer from "multer";
 import path from "path";
 import Papa from "papaparse";
+
+// ─── Hermes token helpers (module-level) ─────────────────────────────────────
+
+function getHermesSecret(): string {
+  return process.env.HERMES_SECRET || "hermes-dev-secret-change-in-production";
+}
+
+function signHermesToken(payload: object): string {
+  const secret = getHermesSecret();
+  const data = JSON.stringify(payload);
+  const sig = crypto.createHmac("sha256", secret).update(data).digest("hex");
+  return Buffer.from(JSON.stringify({ data, sig })).toString("base64url");
+}
+
+function verifyHermesToken(token: string): { valid: boolean; payload?: any } {
+  try {
+    const secret = getHermesSecret();
+    const decoded = JSON.parse(Buffer.from(token, "base64url").toString());
+    const expected = crypto.createHmac("sha256", secret).update(decoded.data).digest("hex");
+    if (expected !== decoded.sig) return { valid: false };
+    const payload = JSON.parse(decoded.data);
+    if (payload.exp && Date.now() > payload.exp) return { valid: false };
+    return { valid: true, payload };
+  } catch {
+    return { valid: false };
+  }
+}
 
 // Helper: get Stripe instance from DB settings
 async function getStripe(): Promise<Stripe | null> {
@@ -780,6 +808,15 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
+  app.get("/api/products/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const product = await storage.getProduct(id);
+      if (!product || !product.active) return res.status(404).json({ message: "Product not found" });
+      res.json(product);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
   app.get("/api/products/all", isAdmin, async (_req, res) => {
     try {
       res.json(await storage.getProducts());
@@ -970,6 +1007,320 @@ export async function registerRoutes(
     try {
       res.json(await storage.getOrders());
     } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ============================================================
+  // HERMES BACKEND DASHBOARD API
+  // ============================================================
+  //
+  // Auth model:
+  //   POST /api/hermes/login  — accepts HERMES_SECRET from env, returns a signed token
+  //   All other /api/hermes/* routes require either:
+  //     a) A valid hermes_token (Bearer header) — full access (superadmin-equivalent)
+  //     b) A valid main-app session with role admin/superadmin — read-only access
+  //
+  // The token is a simple HMAC-SHA256 signed payload (no external JWT library needed).
+
+  // Middleware: accept hermes token OR admin/superadmin session
+  const hermesAuth: RequestHandler = async (req: any, res: any, next: any) => {
+    // Check Bearer token first
+    const authHeader = req.headers["authorization"] || "";
+    if (authHeader.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { valid, payload } = verifyHermesToken(token);
+      if (valid) {
+        req.hermesUser = { role: "superadmin", via: "token", ...payload };
+        return next();
+      }
+    }
+    // Fall back to session-based admin check (read-only path)
+    const user = await getSessionUser(req);
+    if (user && (user.role === "admin" || user.role === "superadmin")) {
+      req.hermesUser = { role: user.role, via: "session", email: user.email };
+      return next();
+    }
+    return res.status(401).json({ message: "Hermes: unauthorized" });
+  };
+
+  // Middleware: require full hermes token (superadmin-only operations)
+  const hermesTokenRequired: RequestHandler = async (req: any, res: any, next: any) => {
+    const authHeader = req.headers["authorization"] || "";
+    if (authHeader.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { valid, payload } = verifyHermesToken(token);
+      if (valid) {
+        req.hermesUser = { role: "superadmin", via: "token", ...payload };
+        return next();
+      }
+    }
+    return res.status(403).json({ message: "Hermes: superadmin token required" });
+  };
+
+  // POST /api/hermes/login — exchange HERMES_SECRET for a token
+  app.post("/api/hermes/login", async (req: any, res: any) => {
+    try {
+      const { secret } = req.body;
+      if (!secret) return res.status(400).json({ message: "secret required" });
+      const expected = getHermesSecret();
+      if (secret !== expected) {
+        return res.status(401).json({ message: "Invalid Hermes secret" });
+      }
+      const payload = { iat: Date.now(), exp: Date.now() + 24 * 60 * 60 * 1000, role: "superadmin" };
+      const token = signHermesToken(payload);
+      res.json({ token, expiresAt: payload.exp });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // GET /api/hermes/me — return current hermes identity
+  app.get("/api/hermes/me", hermesAuth, async (req: any, res: any) => {
+    res.json({ hermesUser: req.hermesUser });
+  });
+
+  // GET /api/hermes/ping — check connectivity to external container
+  app.get("/api/hermes/ping", hermesAuth, async (req: any, res: any) => {
+    try {
+      const containerUrlSetting = await storage.getSetting("hermes_container_url");
+      const containerUrl = containerUrlSetting?.value?.trim();
+      if (!containerUrl) {
+        return res.json({ status: "unconfigured", message: "No container URL configured" });
+      }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      try {
+        const pingUrl = containerUrl.replace(/\/$/, "") + "/health";
+        const response = await fetch(pingUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (response.ok) {
+          const body = await response.json().catch(() => ({}));
+          return res.json({ status: "connected", url: containerUrl, body });
+        }
+        return res.json({ status: "error", url: containerUrl, httpStatus: response.status });
+      } catch (err: any) {
+        clearTimeout(timeout);
+        return res.json({ status: "unreachable", url: containerUrl, error: err.message });
+      }
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // GET /api/hermes/stats — dashboard stats (activity counts, user counts, etc.)
+  app.get("/api/hermes/stats", hermesAuth, async (req: any, res: any) => {
+    try {
+      const [artists, events, dsClients, products, orders, users] = await Promise.all([
+        storage.getArtists(),
+        storage.getEvents(),
+        storage.getDsClients(),
+        storage.getProducts(),
+        storage.getOrders(),
+        req.hermesUser.via === "token" || req.hermesUser.role === "superadmin"
+          ? storage.getAllUsers()
+          : Promise.resolve([]),
+      ]);
+      const recentLogs = await db
+        .select()
+        .from(activityLog)
+        .orderBy(desc(activityLog.createdAt))
+        .limit(20);
+      res.json({
+        counts: {
+          artists: artists.length,
+          events: events.length,
+          dsClients: dsClients.length,
+          products: products.length,
+          orders: orders.length,
+          users: users.length,
+        },
+        recentActivity: recentLogs,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // GET /api/hermes/activity — full activity log (paginated)
+  app.get("/api/hermes/activity", hermesAuth, async (req: any, res: any) => {
+    try {
+      const limit = Math.min(parseInt(String(req.query.limit || "50")), 200);
+      const logs = await db
+        .select()
+        .from(activityLog)
+        .orderBy(desc(activityLog.createdAt))
+        .limit(limit);
+      res.json(logs);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // GET /api/hermes/settings — get hermes-specific settings (superadmin token required)
+  app.get("/api/hermes/settings", hermesTokenRequired, async (req: any, res: any) => {
+    try {
+      const keys = [
+        "hermes_container_url",
+        "hermes_notifications_enabled",
+        "hermes_chat_enabled",
+        // Visibility toggles — control what admin (session) users can see
+        "hermes_admin_visible",    // show Hermes dashboard to admin users
+        "hermes_squad_visible",    // show Squad tab to admin users
+        "hermes_chat_visible",     // show Chat tab to admin users
+      ];
+      const settings: Record<string, string> = {};
+      for (const key of keys) {
+        const s = await storage.getSetting(key);
+        settings[key] = s?.value || "";
+      }
+      res.json(settings);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // GET /api/hermes/visibility — public visibility check (used by top-ribbon and dashboard guard)
+  // Returns only the visibility flags so admin sessions can self-check without a token
+  app.get("/api/hermes/visibility", async (req: any, res: any) => {
+    try {
+      const user = await getSessionUser(req);
+      const isSuperAdminSession = user?.role === "superadmin";
+      // Check Bearer token too
+      const authHeader = req.headers["authorization"] || "";
+      let hasToken = false;
+      if (authHeader.startsWith("Bearer ")) {
+        const { valid } = verifyHermesToken(authHeader.slice(7));
+        hasToken = valid;
+      }
+      const [adminVisible, squadVisible, chatVisible] = await Promise.all([
+        storage.getSetting("hermes_admin_visible"),
+        storage.getSetting("hermes_squad_visible"),
+        storage.getSetting("hermes_chat_visible"),
+      ]);
+      res.json({
+        // Superadmin (token or session) always has full access
+        isSuperAdmin: hasToken || isSuperAdminSession,
+        adminVisible: adminVisible?.value === "true",
+        squadVisible: squadVisible?.value === "true",
+        chatVisible: chatVisible?.value !== "false", // default true
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // PUT /api/hermes/settings — save hermes settings (superadmin token required)
+  app.put("/api/hermes/settings", hermesTokenRequired, async (req: any, res: any) => {
+    try {
+      const allowed = [
+        "hermes_container_url",
+        "hermes_notifications_enabled",
+        "hermes_chat_enabled",
+        "hermes_admin_visible",
+        "hermes_squad_visible",
+        "hermes_chat_visible",
+      ];
+      const updates = req.body as Record<string, string>;
+      for (const [key, value] of Object.entries(updates)) {
+        if (!allowed.includes(key)) continue;
+        await storage.upsertSetting({ key, value, type: "text", section: "hermes", label: key });
+      }
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // POST /api/hermes/chat — send a message to Hermes AI (token required, or admin if chat_visible)
+  app.post("/api/hermes/chat", hermesAuth, async (req: any, res: any) => {
+    try {
+      // If accessed via session (admin), check chat visibility toggle
+      if (req.hermesUser?.via === "session") {
+        const chatVisible = await storage.getSetting("hermes_chat_visible");
+        if (chatVisible?.value === "false") {
+          return res.status(403).json({ message: "Chat is not available to admin users" });
+        }
+      }
+      const settings = await getConciergeSettings();
+      if (!settings.apiKey) {
+        return res.status(400).json({ message: "No AI API key configured. Set it in Integrations." });
+      }
+      const { messages } = req.body;
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ message: "messages array required" });
+      }
+      const systemPrompt = `You are Hermes, the backend operations assistant for this platform. You have access to platform statistics and can help the superadmin manage the system. Be concise, technical, and helpful.`;
+      const reply = await callConciergeAI(messages, systemPrompt, settings);
+      res.json({ reply });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message || "Chat failed" });
+    }
+  });
+
+  // GET /api/hermes/squad — agent registry + last-seen activity
+  // Shape is future-proof: returns an array of agents, currently just Hermes.
+  // When you add more agents, register them here and tag their activity log entries with agent: "<name>".
+  app.get("/api/hermes/squad", hermesAuth, async (req: any, res: any) => {
+    try {
+      // Check squad visibility for session-based admin access
+      if (req.hermesUser?.via === "session") {
+        const squadVisible = await storage.getSetting("hermes_squad_visible");
+        if (squadVisible?.value !== "true") {
+          return res.status(403).json({ message: "Squad view is not available to admin users" });
+        }
+      }
+
+      // Agent registry — NAKED // STAFF v.5
+      // HERMES orchestrates 13 specialists across 6 tiers.
+      // status: "active" | "idle" | "offline"
+      // When an agent is integrated, set status to "active" and wire its activity log tagging.
+      const AGENT_REGISTRY = [
+        // ─── MASTER ───────────────────────────────────────────────────
+        { id: "hermes",   name: "HERMES",   alias: "The Anima",          role: "Orchestrator + memory",       tier: "MASTER",   symbol: "◉",  color: "#d94a1f", status: "active" },
+        // ─── CREATIVE ───────────────────────────────────────────────
+        { id: "lemmy",    name: "LEMMY",    alias: "Head of A&R",         role: "Genre + reference vault",     tier: "CREATIVE", symbol: "🤘", color: "#7a2e0d", status: "offline" },
+        // ─── STUDIO ──────────────────────────────────────────────────
+        { id: "eddie",    name: "EDDIE",    alias: "Producer / Engineer",  role: "Mixing, mastering, recording", tier: "STUDIO",   symbol: "🎚", color: "#3d5a1f", status: "offline" },
+        { id: "geddy",    name: "GEDDY",    alias: "Acoustician",          role: "Room design + treatment",     tier: "STUDIO",   symbol: "🏙", color: "#3d5a1f", status: "offline" },
+        // ─── LIVE ────────────────────────────────────────────────────
+        { id: "slash",    name: "SLASH",    alias: "Live Audio Engineer",  role: "Soundcheck, FOH, monitors",   tier: "LIVE",     symbol: "🎛", color: "#5c3a0e", status: "offline" },
+        { id: "halford",  name: "HALFORD",  alias: "Lighting Designer",    role: "Show design + atmosphere",    tier: "LIVE",     symbol: "💡", color: "#5c3a0e", status: "offline" },
+        { id: "hetfield", name: "HETFIELD", alias: "Tour Manager",         role: "Stage plots, riders, gig ops", tier: "LIVE",    symbol: "🎤", color: "#5c3a0e", status: "offline" },
+        // ─── BUSINESS ───────────────────────────────────────────────
+        { id: "gene",     name: "GENE",     alias: "Business / Royalties", role: "Money, contracts, publishing", tier: "BUSINESS", symbol: "💰", color: "#1f3a5c", status: "offline" },
+        // ─── CAMPAIGN ───────────────────────────────────────────────
+        { id: "nikki",    name: "NIKKI",    alias: "Release Strategist",   role: "Single/EP/album rollout",     tier: "CAMPAIGN", symbol: "📢", color: "#5c1f4a", status: "offline" },
+        { id: "gigguide", name: "GIGGUIDE", alias: "NZ Scene Curator",     role: "NZ streetzine + scene history", tier: "CAMPAIGN", symbol: "📰", color: "#d94a1f", status: "offline" },
+        // ─── TRADES ──────────────────────────────────────────────────
+        { id: "angus",    name: "ANGUS",    alias: "Studio Builder",       role: "Acoustic panels + R-Value",   tier: "TRADES",   symbol: "🔨", color: "#3a3d45", status: "offline" },
+        { id: "randy",    name: "RANDY",    alias: "Cabinet Maker",        role: "Speaker cabs + T/S math",     tier: "TRADES",   symbol: "🪚", color: "#3a3d45", status: "offline" },
+        { id: "dio",      name: "DIO",      alias: "Stage Electrician",    role: "Show power + rig electrics",  tier: "TRADES",   symbol: "⚡",  color: "#3a3d45", status: "offline" },
+        { id: "ozzy",     name: "OZZY",     alias: "Roadie / Build Tech",  role: "Load-in triage + gear repair", tier: "TRADES",  symbol: "🛠",  color: "#3a3d45", status: "offline" },
+      ];
+
+      // Get last activity for each agent from the log
+      // Activity log entries tagged with agent field (future: filter by details->agent)
+      const recentLogs = await db
+        .select()
+        .from(activityLog)
+        .orderBy(desc(activityLog.createdAt))
+        .limit(100);
+
+      // Map last-seen activity to each agent
+      const agentsWithActivity = AGENT_REGISTRY.map((agent) => {
+        // For now, Hermes owns all logged activity
+        const agentLogs = agent.id === "hermes" ? recentLogs : [];
+        return {
+          ...agent,
+          lastActivity: agentLogs[0] || null,
+          recentActions: agentLogs.slice(0, 5),
+          totalActions: agentLogs.length,
+        };
+      });
+
+      res.json({ agents: agentsWithActivity, updatedAt: new Date().toISOString() });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   return httpServer;

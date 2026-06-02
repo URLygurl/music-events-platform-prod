@@ -60,6 +60,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { SiteSetting, Artist, Event, DsClient, User, Product } from "@shared/schema";
 import type { ActivityLogEntry } from "@shared/models/auth";
 import { ARTIST_FIELD_LABELS, EVENT_FIELD_LABELS, DS_CLIENT_FIELD_LABELS, DEFAULT_ARTIST_VISIBILITY, DEFAULT_EVENT_VISIBILITY, DEFAULT_DS_CLIENT_VISIBILITY, getVisibleFields } from "@shared/schema";
+import { FocalPointPicker } from "@/components/smart-image";
 
 const FONT_OPTIONS = [
   "Inter", "Roboto", "Open Sans", "Montserrat", "Poppins",
@@ -489,6 +490,15 @@ function ArtistEditor({
           />
         </FieldWithToggle>
 
+        <FocalPointPicker
+          value={(vis["imageFocal"] as string) || "center"}
+          onChange={(focal) => {
+            const newVis = { ...vis, imageFocal: focal };
+            set("visibleFields", JSON.stringify(newVis));
+          }}
+          previewSrc={(merged.imageUrl as string) || undefined}
+        />
+
         <div className="flex items-center gap-2">
           <Switch
             checked={merged.featured ?? false}
@@ -763,6 +773,19 @@ function ProductEditor({
           value={(merged.imageUrl as string) || ""}
           onChange={(v) => set("imageUrl", v)}
         />
+        {(() => {
+          const productVis = getVisibleFields((merged as any).visibleFields);
+          return (
+            <FocalPointPicker
+              value={(productVis["imageFocal"] as string) || "center"}
+              onChange={(focal) => {
+                const newVis = { ...productVis, imageFocal: focal };
+                set("visibleFields", JSON.stringify(newVis));
+              }}
+              previewSrc={(merged.imageUrl as string) || undefined}
+            />
+          );
+        })()}
         <div className="space-y-1">
           <Label className="text-xs">Product Name</Label>
           <Input

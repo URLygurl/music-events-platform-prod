@@ -3,26 +3,25 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { AppLayout } from "@/components/app-layout";
 import { SearchBar } from "@/components/search-bar";
 import { ImagePlaceholder } from "@/components/image-placeholder";
+import { SmartImage } from "@/components/smart-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/hooks/use-settings";
+import { useCart } from "@/hooks/use-cart";
 import { apiRequest } from "@/lib/queryClient";
 import { ShoppingCart, Plus, Minus, X, ExternalLink, Check } from "lucide-react";
+import { Link } from "wouter";
 import type { Product } from "@shared/schema";
-
-interface CartItem {
-  product: Product;
-  quantity: number;
-}
+import { getVisibleFields } from "@shared/schema";
 
 export default function ShopPage() {
   const { toast } = useToast();
   const { get } = useSettings();
+  const { items: cart, addItem, removeItem, updateQty, total: cartTotal, count: cartCount } = useCart();
   const [search, setSearch] = useState("");
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
@@ -52,48 +51,33 @@ export default function ShopPage() {
       )
     : products;
 
-  const addToCart = (product: Product) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
-      }
-      return [...prev, { product, quantity: 1 }];
+  const handleAddToCart = (product: Product) => {
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      currency: product.currency || "nzd",
+      imageUrl: product.imageUrl || undefined,
     });
     toast({ title: "Added to cart", description: product.name });
   };
 
-  const removeFromCart = (productId: number) => {
-    setCart((prev) => prev.filter((i) => i.product.id !== productId));
-  };
-
-  const updateQty = (productId: number, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((i) =>
-          i.product.id === productId ? { ...i, quantity: i.quantity + delta } : i
-        )
-        .filter((i) => i.quantity > 0)
-    );
-  };
-
-  const cartTotal = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
-
   const checkoutMutation = useMutation({
     mutationFn: async () => {
-      const items = cart.map((i) => ({
-        name: i.product.name,
-        description: i.product.description || undefined,
-        imageUrl: i.product.imageUrl || undefined,
-        price: i.product.price,
-        currency: i.product.currency || "nzd",
-        quantity: i.quantity,
-      }));
-      const res = await apiRequest("POST", "/api/stripe/checkout", { items });
-      return res as { url: string; sessionId: string };
+      const checkoutItems = cart.map((i) => {
+        const variantNote = i.selectedVariants
+          ? Object.entries(i.selectedVariants).map(([k, v]) => `${k}: ${v}`).join(", ")
+          : "";
+        return {
+          name: i.name + (variantNote ? ` (${variantNote})` : ""),
+          imageUrl: i.imageUrl,
+          price: i.price,
+          currency: i.currency || "nzd",
+          quantity: i.quantity,
+        };
+      });
+      const res = await apiRequest("POST", "/api/stripe/checkout", { items: checkoutItems });
+      return res as unknown as { url: string; sessionId: string };
     },
     onSuccess: (data) => {
       setRedirecting(true);
@@ -192,47 +176,50 @@ export default function ShopPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {filtered?.map((product) => (
-              <Card key={product.id} className="overflow-hidden" data-testid={`card-product-${product.id}`}>
-                <div className="aspect-square w-full overflow-hidden bg-muted">
-                  {product.imageUrl ? (
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <ImagePlaceholder label="" className="w-full h-full" />
-                  )}
-                </div>
-                <div className="p-3 space-y-2">
-                  <div>
-                    <p className="text-sm font-medium leading-tight">{product.name}</p>
-                    {product.category && product.category !== "general" && (
-                      <p className="text-xs text-muted-foreground capitalize">{product.category}</p>
-                    )}
-                    {product.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{product.description}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold">
-                      {formatPrice(product.price, product.currency || "nzd")}
-                    </span>
-                    {product.stock !== null && product.stock !== undefined && product.stock <= 0 ? (
-                      <Badge variant="secondary" className="text-xs">Sold Out</Badge>
+              <Link key={product.id} href={`/shop/${product.id}`} className="block">
+                <Card className="overflow-hidden" data-testid={`card-product-${product.id}`}>
+                  <div className="aspect-square w-full overflow-hidden bg-muted">
+                    {product.imageUrl ? (
+                      <SmartImage
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full"
+                        focal={(getVisibleFields((product as any).visibleFields)["imageFocal"] as unknown as string) || "center"}
+                      />
                     ) : (
-                      <Button
-                        size="sm"
-                        className="h-7 text-xs px-2"
-                        onClick={() => addToCart(product)}
-                        data-testid={`button-add-to-cart-${product.id}`}
-                      >
-                        Add
-                      </Button>
+                      <ImagePlaceholder label="" className="w-full h-full" />
                     )}
                   </div>
-                </div>
-              </Card>
+                  <div className="p-3 space-y-2">
+                    <div>
+                      <p className="text-sm font-medium leading-tight">{product.name}</p>
+                      {product.category && product.category !== "general" && (
+                        <p className="text-xs text-muted-foreground capitalize">{product.category}</p>
+                      )}
+                      {product.description && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{product.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">
+                        {formatPrice(product.price, product.currency || "nzd")}
+                      </span>
+                      {product.stock !== null && product.stock !== undefined && product.stock <= 0 ? (
+                        <Badge variant="secondary" className="text-xs">Sold Out</Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs px-2"
+                          onClick={(e) => { e.preventDefault(); handleAddToCart(product); }}
+                          data-testid={`button-add-to-cart-${product.id}`}
+                        >
+                          Add
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </Link>
             ))}
           </div>
         )}
@@ -267,28 +254,33 @@ export default function ShopPage() {
 
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-              {cart.map((item) => (
-                <div key={item.product.id} className="flex items-center gap-3">
+              {cart.map((item, idx) => (
+                <div key={`${item.productId}-${idx}`} className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-                    {item.product.imageUrl ? (
-                      <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
                       <ImagePlaceholder label="" className="w-12 h-12" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.product.name}</p>
-                    <p className="text-xs text-muted-foreground">{formatPrice(item.product.price, item.product.currency || "nzd")} each</p>
+                    <p className="text-sm font-medium truncate">{item.name}</p>
+                    {item.selectedVariants && Object.keys(item.selectedVariants).length > 0 && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {Object.entries(item.selectedVariants).map(([k, v]) => `${k}: ${v}`).join(", ")}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">{formatPrice(item.price, item.currency || "nzd")} each</p>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(item.product.id, -1)}>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(item.productId, -1, item.selectedVariants)}>
                       <Minus className="w-3 h-3" />
                     </Button>
                     <span className="text-sm w-6 text-center">{item.quantity}</span>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(item.product.id, 1)}>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateQty(item.productId, 1, item.selectedVariants)}>
                       <Plus className="w-3 h-3" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() => removeFromCart(item.product.id)}>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() => removeItem(item.productId, item.selectedVariants)}>
                       <X className="w-3 h-3" />
                     </Button>
                   </div>

@@ -17,7 +17,10 @@ import AdminPage from "@/pages/admin";
 import IntegrationsPage from "@/pages/integrations";
 import DonatePage from "@/pages/donate";
 import ShopPage from "@/pages/shop";
+import ProductDetailPage from "@/pages/product-detail";
 import NotFound from "@/pages/not-found";
+import HermesLoginPage from "@/pages/hermes-login";
+import HermesDashboard from "@/pages/hermes";
 import { ConciergeWidget } from "@/components/concierge-widget";
 
 function Router() {
@@ -33,8 +36,11 @@ function Router() {
       <Route path="/events" component={EventsPage} />
       <Route path="/ds" component={DSPage} />
       <Route path="/donate" component={DonatePage} />
+      <Route path="/shop/:id" component={ProductDetailPage} />
       <Route path="/shop" component={ShopPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/hermes/login" component={HermesLoginPage} />
+      <Route path="/hermes" component={HermesDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

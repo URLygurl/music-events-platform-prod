@@ -1,10 +1,11 @@
-import { Menu, LogIn } from "lucide-react";
+import { Menu, LogIn, Terminal } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { useSettings } from "@/hooks/use-settings";
+import { useQuery } from "@tanstack/react-query";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 
 const PUBLIC_MENU_ITEMS = [
@@ -29,6 +30,25 @@ export function TopRibbon() {
 
   const companyName = get("global_company_name", "[ Company Name ]");
   const logoImage = get("global_logo_image");
+
+  // Check Hermes visibility for admin users
+  // Superadmin always sees it; admin only sees it when hermes_admin_visible is true
+  const hermesToken = typeof window !== "undefined" ? localStorage.getItem("hermes_token") : null;
+  const { data: hermesVisibility } = useQuery<{
+    isSuperAdmin: boolean;
+    adminVisible: boolean;
+    squadVisible: boolean;
+    chatVisible: boolean;
+  }>({
+    queryKey: ["/api/hermes/visibility"],
+    enabled: isAdmin,
+    staleTime: 30000,
+  });
+  const showHermesLink = isAdmin && (
+    hermesToken != null ||
+    hermesVisibility?.isSuperAdmin ||
+    hermesVisibility?.adminVisible
+  );
 
   const visiblePublicItems = PUBLIC_MENU_ITEMS.filter((item) => get(item.settingKey, "true") === "true");
   const visibleAdminItems = isAdmin
@@ -81,6 +101,14 @@ export function TopRibbon() {
                         </Button>
                       </Link>
                     ))}
+                    {showHermesLink && (
+                      <Link href="/hermes" onClick={() => setOpen(false)}>
+                        <Button variant="ghost" className="w-full justify-start" data-testid="menu-hermes">
+                          <Terminal className="w-4 h-4 mr-2" />
+                          Hermes
+                        </Button>
+                      </Link>
+                    )}
                   </>
                 )}
                 {isAuthenticated ? (

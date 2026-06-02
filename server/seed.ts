@@ -39,6 +39,8 @@ export async function seedDatabase() {
         created_at timestamp DEFAULT now()
       )
     `);
+    // Add visible_fields column to products if not present
+    await db.execute(sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS visible_fields text`);
     // Fix column name if table was created with wrong name in a previous deploy
     try {
       await db.execute(sql`ALTER TABLE products RENAME COLUMN price_cents TO price`);
@@ -228,6 +230,11 @@ export async function seedDatabase() {
     { key: "anim_box_3_text", value: "", type: "text", section: "animations", label: "Animation Box 3 Text" },
     { key: "anim_box_3_style", value: "slide-left", type: "text", section: "animations", label: "Animation Box 3 Style" },
     { key: "anim_box_3_bg", value: "", type: "image", section: "animations", label: "Animation Box 3 Background" },
+    // DS streaming player settings
+    { key: "ds_stream_enabled", value: "false", type: "toggle", section: "ds", label: "Enable Streaming Banner" },
+    { key: "ds_stream_title", value: "Now Streaming", type: "text", section: "ds", label: "Streaming Banner Title" },
+    { key: "ds_stream_url", value: "", type: "text", section: "ds", label: "Stream URL (YouTube / Spotify / Bandcamp / SoundCloud)" },
+    { key: "ds_stream_type", value: "", type: "text", section: "ds", label: "Stream Type (leave blank to auto-detect: youtube / spotify / bandcamp / soundcloud / apple_music / audio)" },
   ];
   for (const s of requiredSettings) {
     await db.insert(siteSettings).values(s).onConflictDoNothing({ target: siteSettings.key });
