@@ -677,6 +677,88 @@ function PaymentsSection({
         )}
       </div>
 
+      {/* Afterpay toggle — only visible when Stripe is configured */}
+      {stripeEnabled && isConfigured && (
+        <div className="border-t pt-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              <span className="text-sm font-medium">Afterpay / Clearpay</span>
+            </div>
+            <Switch
+              checked={(localValues["stripe_afterpay_enabled"] ?? get("stripe_afterpay_enabled", "false")) === "true"}
+              onCheckedChange={(v) => setLocal("stripe_afterpay_enabled", v ? "true" : "false")}
+              data-testid="toggle-stripe-afterpay"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Enable Afterpay (AU/NZ) and Clearpay (UK) as payment options at Stripe checkout. Requires Stripe keys above and an active Stripe account with Afterpay enabled in your{" "}
+            <a href="https://dashboard.stripe.com/settings/payment_methods" target="_blank" rel="noopener noreferrer" className="underline">Stripe Payment Methods settings</a>.
+          </p>
+        </div>
+      )}
+
+      {/* PayPal */}
+      <div className="border-t pt-4">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5" />
+            <span className="text-sm font-medium">PayPal</span>
+          </div>
+          <Switch
+            checked={(localValues["int_paypal_enabled"] ?? get("int_paypal_enabled", "false")) === "true"}
+            onCheckedChange={(v) => setLocal("int_paypal_enabled", v ? "true" : "false")}
+            data-testid="toggle-int_paypal_enabled"
+          />
+        </div>
+        {(localValues["int_paypal_enabled"] ?? get("int_paypal_enabled", "false")) === "true" && (
+          <Card className="p-4 space-y-3 overflow-visible">
+            <p className="text-xs text-muted-foreground">
+              Connect your PayPal business account. Get your Client ID and Secret from{" "}
+              <a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noopener noreferrer" className="underline">PayPal Developer Dashboard → Apps &amp; Credentials</a>.
+              Set mode to <code className="text-xs">sandbox</code> for testing or <code className="text-xs">live</code> for real payments.
+            </p>
+            <div className="space-y-1">
+              <Label className="text-xs">Client ID</Label>
+              <Input
+                value={localValues["paypal_client_id"] ?? get("paypal_client_id", "")}
+                onChange={(e) => setLocal("paypal_client_id", e.target.value)}
+                placeholder="AaBbCcDd..."
+                data-testid="input-paypal-client-id"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Secret</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type={showSecret ? "text" : "password"}
+                  value={localValues["paypal_secret"] ?? get("paypal_secret", "")}
+                  onChange={(e) => setLocal("paypal_secret", e.target.value)}
+                  placeholder="EeFfGgHh..."
+                  className="flex-1"
+                  data-testid="input-paypal-secret"
+                />
+                <Button size="icon" variant="ghost" onClick={() => setShowSecret(!showSecret)}>
+                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Mode</Label>
+              <select
+                className="w-full border rounded px-3 py-2 text-sm bg-background"
+                value={localValues["paypal_mode"] ?? get("paypal_mode", "sandbox")}
+                onChange={(e) => setLocal("paypal_mode", e.target.value)}
+                data-testid="select-paypal-mode"
+              >
+                <option value="sandbox">Sandbox (testing)</option>
+                <option value="live">Live (real payments)</option>
+              </select>
+            </div>
+          </Card>
+        )}
+      </div>
+
       <div className="border-t pt-4">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
@@ -761,7 +843,7 @@ export default function IntegrationsPage() {
   };
 
   const handleSave = () => {
-    const integrationSettings = allSettings?.filter((s) => s.section === "integrations" || s.section === "integrations_sheets" || s.section === "integrations_google" || s.section === "integrations_concierge") || [];
+    const integrationSettings = allSettings?.filter((s) => s.section === "integrations" || s.section === "integrations_sheets" || s.section === "integrations_google" || s.section === "integrations_concierge" || s.section === "integrations_payments") || [];
     const toSave = integrationSettings.map((s) => ({
       key: s.key,
       value: localValues[s.key] ?? s.value,
@@ -771,7 +853,7 @@ export default function IntegrationsPage() {
     }));
     const newKeys = Object.keys(localValues).filter((k) => !integrationSettings.find((s) => s.key === k));
     for (const k of newKeys) {
-      const section = k.startsWith("google_sheet_") ? "integrations_sheets" : k === "google_service_account_json" ? "integrations_google" : k.startsWith("concierge_") ? "integrations_concierge" : "integrations";
+      const section = k.startsWith("google_sheet_") ? "integrations_sheets" : k === "google_service_account_json" ? "integrations_google" : k.startsWith("concierge_") ? "integrations_concierge" : (k.startsWith("stripe_") || k.startsWith("paypal_") || k.startsWith("int_stripe") || k.startsWith("int_donations")) ? "integrations_payments" : "integrations";
       toSave.push({ key: k, value: localValues[k], type: "text", section, label: k });
     }
     saveMutation.mutate(toSave);

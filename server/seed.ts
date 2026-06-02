@@ -239,6 +239,15 @@ export async function seedDatabase() {
     { key: "ds_stream_title", value: "Now Streaming", type: "text", section: "ds", label: "Streaming Banner Title" },
     { key: "ds_stream_url", value: "", type: "text", section: "ds", label: "Stream URL (YouTube / Spotify / Bandcamp / SoundCloud)" },
     { key: "ds_stream_type", value: "", type: "text", section: "ds", label: "Stream Type (leave blank to auto-detect: youtube / spotify / bandcamp / soundcloud / apple_music / audio)" },
+    // PayPal settings
+    { key: "paypal_client_id", value: "", type: "text", section: "integrations_payments", label: "PayPal Client ID" },
+    { key: "paypal_secret", value: "", type: "password", section: "integrations_payments", label: "PayPal Secret" },
+    { key: "paypal_mode", value: "sandbox", type: "text", section: "integrations_payments", label: "PayPal Mode (sandbox or live)" },
+    // Stripe keys (for Stripe + Afterpay)
+    { key: "stripe_secret_key", value: "", type: "password", section: "integrations_payments", label: "Stripe Secret Key" },
+    { key: "stripe_publishable_key", value: "", type: "text", section: "integrations_payments", label: "Stripe Publishable Key" },
+    { key: "stripe_webhook_secret", value: "", type: "password", section: "integrations_payments", label: "Stripe Webhook Secret" },
+    { key: "stripe_afterpay_enabled", value: "false", type: "toggle", section: "integrations_payments", label: "Enable Afterpay / Clearpay via Stripe" },
     // Global banner style settings
     { key: "global_logo_object_position", value: "center top", type: "text", section: "global", label: "Logo Image Position (e.g. center top, center, 50% 20%)" },
     { key: "global_company_name_font_size", value: "12", type: "text", section: "global", label: "Site Name Font Size (px)" },

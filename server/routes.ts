@@ -889,8 +889,13 @@ export async function registerRoutes(
       }));
 
       const origin = (req.headers.origin as string) || "https://deadsounds.live";
+      const afterpaySetting = await storage.getSetting("stripe_afterpay_enabled");
+      const afterpayEnabled = afterpaySetting?.value === "true";
+      const paymentMethodTypes: string[] = ["card"];
+      if (afterpayEnabled) paymentMethodTypes.push("afterpay_clearpay");
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
+        payment_method_types: paymentMethodTypes as any,
         line_items: lineItems,
         customer_email: customerEmail || undefined,
         success_url: successUrl || `${origin}/shop?success=1`,
@@ -999,6 +1004,102 @@ export async function registerRoutes(
     } catch (e: any) {
       console.error("Webhook error:", e);
       res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ============================================================
+  // PAYPAL CHECKOUT
+  // ============================================================
+  // GET /api/paypal/config — public: check if PayPal is configured
+  app.get("/api/paypal/config", async (_req, res) => {
+    try {
+      const setting = await storage.getSetting("paypal_client_id");
+      const clientId = setting?.value?.trim();
+      res.json({ clientId: clientId && clientId.length > 10 ? clientId : null });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // POST /api/paypal/checkout — create a PayPal order and return approval URL
+  app.post("/api/paypal/checkout", async (req: Request, res: Response) => {
+    try {
+      const clientIdSetting = await storage.getSetting("paypal_client_id");
+      const secretSetting = await storage.getSetting("paypal_secret");
+      const clientId = clientIdSetting?.value?.trim();
+      const secret = secretSetting?.value?.trim();
+      if (!clientId || !secret) {
+        return res.status(400).json({ message: "PayPal is not configured. Please add your PayPal Client ID and Secret in the Integrations panel." });
+      }
+      const { items, customerEmail, currency } = req.body;
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "No items provided" });
+      }
+      const modeSetting = await storage.getSetting("paypal_mode");
+      const mode = modeSetting?.value?.trim() === "live" ? "live" : "sandbox";
+      const baseUrl = mode === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
+      // Get access token
+      const tokenRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Authorization": `Basic ${Buffer.from(`${clientId}:${secret}`).toString("base64")}`,
+        },
+        body: "grant_type=client_credentials",
+      });
+      if (!tokenRes.ok) {
+        const err = await tokenRes.json().catch(() => ({})) as any;
+        return res.status(400).json({ message: `PayPal auth failed: ${JSON.stringify(err)}` });
+      }
+      const { access_token } = await tokenRes.json() as any;
+      const totalAmount = items.reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+      const cur = (currency || "NZD").toUpperCase();
+      const origin = (req.headers.origin as string) || "https://deadsounds.live";
+      // Create PayPal order
+      const orderRes = await fetch(`${baseUrl}/v2/checkout/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${access_token}`,
+        },
+        body: JSON.stringify({
+          intent: "CAPTURE",
+          purchase_units: [{
+            amount: {
+              currency_code: cur,
+              value: (totalAmount / 100).toFixed(2),
+              breakdown: { item_total: { currency_code: cur, value: (totalAmount / 100).toFixed(2) } },
+            },
+            items: items.map((item: any) => ({
+              name: item.name,
+              quantity: String(item.quantity || 1),
+              unit_amount: { currency_code: cur, value: (item.price / 100).toFixed(2) },
+            })),
+          }],
+          application_context: {
+            return_url: `${origin}/shop?paypal=success`,
+            cancel_url: `${origin}/shop?paypal=cancelled`,
+            user_action: "PAY_NOW",
+          },
+        }),
+      });
+      if (!orderRes.ok) {
+        const err = await orderRes.json().catch(() => ({})) as any;
+        return res.status(400).json({ message: `PayPal order creation failed: ${JSON.stringify(err)}` });
+      }
+      const ppOrder = await orderRes.json() as any;
+      const approveLink = ppOrder.links?.find((l: any) => l.rel === "approve")?.href;
+      await storage.createOrder({
+        stripeSessionId: `paypal_${ppOrder.id}`,
+        customerEmail: customerEmail || null,
+        amountTotal: totalAmount,
+        currency: cur.toLowerCase(),
+        status: "pending",
+        items: JSON.stringify(items),
+        metadata: JSON.stringify({ provider: "paypal", paypalOrderId: ppOrder.id }),
+      });
+      res.json({ url: approveLink, orderId: ppOrder.id });
+    } catch (e: any) {
+      console.error("PayPal checkout error:", e);
+      res.status(500).json({ message: e.message || "PayPal checkout failed" });
     }
   });
 

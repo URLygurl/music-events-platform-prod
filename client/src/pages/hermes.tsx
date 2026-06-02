@@ -15,6 +15,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useHermesAuth } from "@/hooks/use-hermes-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/app-layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -762,6 +763,9 @@ function SettingsTab({
 export default function HermesDashboard() {
   const [, navigate] = useLocation();
   const { hermesIdentity, isSuperAdmin, isAdmin, loading, logout, authHeader } = useHermesAuth();
+  const { isAdmin: isMainAdmin } = useAuth();
+  // canQuery: true if either the hermes identity is confirmed OR the main session is admin
+  const canQuery = isAdmin || isMainAdmin;
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const { toast } = useToast();
 
@@ -784,8 +788,8 @@ export default function HermesDashboard() {
     staleTime: 30000,
   });
 
-  // Stats
-  const { data: stats, refetch: refetchStats } = useQuery<HermesStats>({
+  // Stats — enabled as soon as either hermes identity or main admin session is confirmed
+  const { data: stats, isError: statsError, refetch: refetchStats } = useQuery<HermesStats>({
     queryKey: ["/api/hermes/stats"],
     queryFn: async () => {
       const res = await fetch("/api/hermes/stats", {
@@ -795,8 +799,9 @@ export default function HermesDashboard() {
       if (!res.ok) throw new Error("Failed to load stats");
       return res.json();
     },
-    enabled: isAdmin,
+    enabled: canQuery,
     staleTime: 30000,
+    retry: 2,
   });
 
   // Ping
@@ -855,8 +860,8 @@ export default function HermesDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl border-2 border-foreground flex items-center justify-center">
-              <Terminal className="w-4 h-4" />
+            <div className="w-10 h-10 rounded-xl border-2 border-foreground overflow-hidden flex items-center justify-center bg-background">
+              <img src="/hermes-icon.png" alt="Hermes" className="w-9 h-9 object-contain" style={{ filter: 'invert(var(--hermes-icon-invert, 0))' }} />
             </div>
             <div>
               <h1 className="font-semibold text-base leading-tight">Hermes</h1>
