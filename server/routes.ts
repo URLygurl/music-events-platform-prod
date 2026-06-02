@@ -1373,24 +1373,37 @@ export async function registerRoutes(
           return res.status(403).json({ message: "Chat is not available to admin users" });
         }
       }
-      const settings = await getConciergeSettings();
-      if (!settings.apiKey) {
-        return res.status(400).json({ message: "No AI API key configured. Set it in Integrations." });
-      }
       const { messages, specialist } = req.body;
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ message: "messages array required" });
       }
-      // Look up specialist system prompt from DB, fall back to Hermes default
+      // Get Hermes container URL
+      const containerUrlSetting = await storage.getSetting("hermes_container_url");
+      const containerUrl = containerUrlSetting?.value?.trim();
+      if (!containerUrl) {
+        return res.status(503).json({ message: "Hermes container not configured. Set the container URL in Hermes Settings." });
+      }
+      // Look up specialist system prompt from DB
       let systemPrompt = `You are Hermes, the backend operations assistant for this music platform. You help the admin team manage the system. Be concise, technical, and helpful.`;
+      const handle = (specialist || "HERMES").toUpperCase();
       if (specialist) {
         const member = await (storage as any).getSquadMember(specialist);
         if (member?.intent) systemPrompt = member.intent;
       }
-      const reply = await callConciergeAI(messages, systemPrompt, settings);
+      // Proxy to Hermes container
+      const containerRes = await fetch(`${containerUrl}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages, systemPrompt, specialist: handle }),
+      });
+      if (!containerRes.ok) {
+        const err = await containerRes.json().catch(() => ({ message: "Container error" }));
+        return res.status(containerRes.status).json({ message: err.message || "Hermes container returned an error" });
+      }
+      const data = await containerRes.json();
+      const reply = data.reply || data.content || data.message || "...";
       // Save to message history
       const userEmail = req.hermesUser?.email || "admin";
-      const handle = (specialist || "HERMES").toUpperCase();
       if (messages.length > 0) {
         const last = messages[messages.length - 1];
         await (storage as any).saveHermesMessage({ specialistHandle: handle, role: last.role, content: last.content, userEmail, isPublic: false });
@@ -1406,13 +1419,15 @@ export async function registerRoutes(
   // No auth required. Injects event context if eventId is provided.
   app.post("/api/hermes/neil", async (req: any, res: any) => {
     try {
-      const settings = await getConciergeSettings();
-      if (!settings.apiKey) {
-        return res.status(503).json({ message: "Neil is temporarily offline. Please ask a crew member for help." });
-      }
       const { messages, eventId, sessionId } = req.body;
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ message: "messages array required" });
+      }
+      // Get Hermes container URL
+      const containerUrlSetting = await storage.getSetting("hermes_container_url");
+      const containerUrl = containerUrlSetting?.value?.trim();
+      if (!containerUrl) {
+        return res.json({ reply: "Hey! I'm Neil 🎟 I'm still getting set up — ask a crew member for help in the meantime!", specialist: "NEIL" });
       }
       // Get Neil's intent from DB
       const neil = await (storage as any).getSquadMember("NEIL");
@@ -1430,7 +1445,17 @@ export async function registerRoutes(
         const artistList = allArtists.slice(0, 20).map((a: any) => `- ${a.name} (${a.genre || ""})${a.timeSlot ? " at " + a.timeSlot : ""}`).join("\n");
         systemPrompt += `\n## Artists on the Lineup\n${artistList}\n`;
       }
-      const reply = await callConciergeAI(messages, systemPrompt, settings);
+      // Proxy to Hermes container
+      const containerRes = await fetch(`${containerUrl}/neil`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages, systemPrompt, specialist: "NEIL", eventId }),
+      });
+      if (!containerRes.ok) {
+        return res.json({ reply: "Hey! I'm having a moment — try again in a sec or ask a crew member. 🎟", specialist: "NEIL" });
+      }
+      const data = await containerRes.json();
+      const reply = data.reply || data.content || data.message || "...";
       // Save to DB
       if (messages.length > 0) {
         const last = messages[messages.length - 1];
