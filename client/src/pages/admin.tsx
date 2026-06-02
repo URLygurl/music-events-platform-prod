@@ -451,6 +451,15 @@ function ArtistEditor({
           </FieldWithToggle>
         ))}
 
+        <FocalPointPicker
+          value={(vis["imageFocal"] as unknown as string) || "center"}
+          onChange={(focal) => {
+            const newVis = { ...vis, imageFocal: focal };
+            set("visibleFields", JSON.stringify(newVis));
+          }}
+          previewSrc={(merged.imageUrl as string) || undefined}
+        />
+
         <FieldWithToggle fieldKey="members" visible={vis.members !== false} onToggleVisible={setVis}>
           <div className="space-y-1">
             <Label className="text-xs">Members</Label>
@@ -493,7 +502,7 @@ function ArtistEditor({
         </FieldWithToggle>
 
         <FocalPointPicker
-          value={(vis["imageFocal"] as string) || "center"}
+          value={(vis["imageFocal"] as unknown as string) || "center"}
           onChange={(focal) => {
             const newVis = { ...vis, imageFocal: focal };
             set("visibleFields", JSON.stringify(newVis));
@@ -578,6 +587,15 @@ function EventEditor({
             onChange={(v) => set("imageUrl", v)}
           />
         </FieldWithToggle>
+
+        <FocalPointPicker
+          value={(vis["imageFocal"] as unknown as string) || "center"}
+          onChange={(focal) => {
+            const newVis = { ...vis, imageFocal: focal };
+            set("visibleFields", JSON.stringify(newVis));
+          }}
+          previewSrc={(merged.imageUrl as string) || undefined}
+        />
 
         {fields.map((f) => (
           <FieldWithToggle key={f.key} fieldKey={f.key} visible={vis[f.key] !== false} onToggleVisible={setVis}>
@@ -727,6 +745,15 @@ function DsClientEditor({
             onChange={(v) => set("promoterImageUrl", v)}
           />
         </FieldWithToggle>
+
+        <FocalPointPicker
+          value={(vis["promoterImageFocal"] as unknown as string) || "center"}
+          onChange={(focal) => {
+            const newVis = { ...vis, promoterImageFocal: focal };
+            set("visibleFields", JSON.stringify(newVis));
+          }}
+          previewSrc={(merged.promoterImageUrl as string) || undefined}
+        />
       </div>
     </Card>
   );
@@ -779,7 +806,7 @@ function ProductEditor({
           const productVis = getVisibleFields((merged as any).visibleFields);
           return (
             <FocalPointPicker
-              value={(productVis["imageFocal"] as string) || "center"}
+              value={(productVis["imageFocal"] as unknown as string) || "center"}
               onChange={(focal) => {
                 const newVis = { ...productVis, imageFocal: focal };
                 set("visibleFields", JSON.stringify(newVis));
@@ -1551,14 +1578,14 @@ export default function AdminPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium">{log.userName || log.userEmail || "Unknown"}</span>
-                            <Badge variant={log.userRole === "superadmin" ? "default" : "secondary"} className="text-xs">
-                              {log.userRole || "user"}
+                            <span className="text-sm font-medium">{(log as any).userName || (log as any).userEmail || "Unknown"}</span>
+                            <Badge variant={(log as any).userRole === "superadmin" ? "default" : "secondary"} className="text-xs">
+                              {(log as any).userRole || "user"}
                             </Badge>
                             <Badge variant="outline" className="text-xs font-mono">{log.action}</Badge>
                           </div>
-                          {log.description && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{log.description}</p>
+                          {(log as any).description && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{(log as any).description}</p>
                           )}
                           <div className="flex items-center gap-1 mt-1">
                             <Clock className="w-3 h-3 text-muted-foreground" />

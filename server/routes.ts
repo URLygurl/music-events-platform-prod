@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import type { RequestHandler } from "express";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema, insertDsClientSchema, insertProductSchema } from "@shared/schema";
@@ -229,7 +230,7 @@ export async function registerRoutes(
 
   app.get("/api/artists/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid artist ID" });
       const artist = await storage.getArtist(id);
       if (!artist) return res.status(404).json({ message: "Artist not found" });
@@ -254,7 +255,7 @@ export async function registerRoutes(
 
   app.patch("/api/artists/:id", isAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid artist ID" });
       const artist = await storage.updateArtist(id, req.body);
       if (!artist) return res.status(404).json({ message: "Artist not found" });
@@ -267,7 +268,7 @@ export async function registerRoutes(
 
   app.delete("/api/artists/:id", isAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid artist ID" });
       await storage.deleteArtist(id);
       res.status(204).send();
@@ -289,7 +290,7 @@ export async function registerRoutes(
 
   app.get("/api/events/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid event ID" });
       const event = await storage.getEvent(id);
       if (!event) return res.status(404).json({ message: "Event not found" });
@@ -314,7 +315,7 @@ export async function registerRoutes(
 
   app.patch("/api/events/:id", isAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid event ID" });
       const event = await storage.updateEvent(id, req.body);
       if (!event) return res.status(404).json({ message: "Event not found" });
@@ -327,7 +328,7 @@ export async function registerRoutes(
 
   app.delete("/api/events/:id", isAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid event ID" });
       await storage.deleteEvent(id);
       res.status(204).send();
@@ -345,7 +346,7 @@ export async function registerRoutes(
       res.status(201).json(enquiry);
 
       tryAppendToSheet("google_sheet_enquiries", [
-        [parsed.data.name, parsed.data.email, (parsed.data as any).phone || "", (parsed.data as any).subject || "", parsed.data.message || "", new Date().toISOString()],
+        [(parsed.data as any).name, (parsed.data as any).email, (parsed.data as any).phone || "", (parsed.data as any).subject || "", (parsed.data as any).message || "", new Date().toISOString()],
       ]);
     } catch (error) {
       console.error("Error creating enquiry:", error);
@@ -463,7 +464,7 @@ export async function registerRoutes(
 
   app.get("/api/files/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid file ID" });
       const file = await storage.getUploadedFile(id);
       if (!file) return res.status(404).json({ message: "File not found" });
@@ -494,7 +495,7 @@ export async function registerRoutes(
     try {
       const parsed = insertMediaItemSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
-      if (!isValidEmbedUrl(parsed.data.url) || !isValidEmbedUrl(parsed.data.embedUrl)) {
+      if (!isValidEmbedUrl((parsed.data as any).url) || !isValidEmbedUrl((parsed.data as any).embedUrl)) {
         return res.status(400).json({ message: "URL must be from an allowed platform (YouTube, Bandcamp, SoundCloud, Spotify)" });
       }
       const item = await storage.createMediaItem(parsed.data);
@@ -507,7 +508,7 @@ export async function registerRoutes(
 
   app.patch("/api/media/:id", isAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid media ID" });
       const { title, url, type, embedUrl, order } = req.body;
       if (!isValidEmbedUrl(url) || !isValidEmbedUrl(embedUrl)) {
@@ -524,7 +525,7 @@ export async function registerRoutes(
 
   app.delete("/api/media/:id", isAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid media ID" });
       await storage.deleteMediaItem(id);
       res.status(204).send();
@@ -568,7 +569,7 @@ export async function registerRoutes(
       res.status(201).json(donation);
 
       tryAppendToSheet("google_sheet_donations", [
-        [parsed.data.name, parsed.data.email, parsed.data.amount, parsed.data.message || "", new Date().toISOString()],
+        [(parsed.data as any).name, (parsed.data as any).email, (parsed.data as any).amount, (parsed.data as any).message || "", new Date().toISOString()],
       ]);
     } catch (error) {
       console.error("Error creating donation:", error);
@@ -588,7 +589,7 @@ export async function registerRoutes(
 
   app.get("/api/ds-clients/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       const client = await storage.getDsClient(id);
       if (!client) return res.status(404).json({ message: "DS client not found" });
       res.json(client);
@@ -612,7 +613,7 @@ export async function registerRoutes(
 
   app.patch("/api/ds-clients/:id", isAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       const updated = await storage.updateDsClient(id, req.body);
       if (!updated) return res.status(404).json({ message: "DS client not found" });
       res.json(updated);
@@ -624,7 +625,7 @@ export async function registerRoutes(
 
   app.delete("/api/ds-clients/:id", isAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       await storage.deleteDsClient(id);
       res.json({ success: true });
     } catch (error) {
@@ -848,7 +849,7 @@ export async function registerRoutes(
 
   app.get("/api/products/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       const product = await storage.getProduct(id);
       if (!product || !product.active) return res.status(404).json({ message: "Product not found" });
       res.json(product);
@@ -866,7 +867,7 @@ export async function registerRoutes(
 
   app.put("/api/products/:id", isAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       const product = await storage.updateProduct(id, req.body);
       if (!product) return res.status(404).json({ message: "Product not found" });
       await logActivity(req, "update_product", `Updated product: ${product.name}`);
@@ -876,7 +877,7 @@ export async function registerRoutes(
 
   app.delete("/api/products/:id", isAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id), 10);
       await storage.deleteProduct(id);
       await logActivity(req, "delete_product", `Deleted product id: ${id}`);
       res.json({ ok: true });

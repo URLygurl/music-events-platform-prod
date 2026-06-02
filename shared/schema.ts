@@ -185,22 +185,22 @@ export const hermesMessages = pgTable("hermes_messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertHermesSquadSchema = createInsertSchema(hermesSquad).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertHermesMessageSchema = createInsertSchema(hermesMessages).omit({ id: true, createdAt: true });
+export const insertHermesSquadSchema = (createInsertSchema(hermesSquad) as any).omit({ id: true, createdAt: true, updatedAt: true }) as any;
+export const insertHermesMessageSchema = (createInsertSchema(hermesMessages) as any).omit({ id: true, createdAt: true }) as any;
 export type HermesSquadMember = typeof hermesSquad.$inferSelect;
 export type HermesMessage = typeof hermesMessages.$inferSelect;
 export type InsertHermesSquadMember = z.infer<typeof insertHermesSquadSchema>;
 export type InsertHermesMessage = z.infer<typeof insertHermesMessageSchema>;
 
-export const insertArtistSchema = createInsertSchema(artists).omit({ id: true });
-export const insertEventSchema = createInsertSchema(events).omit({ id: true });
-export const insertEnquirySchema = createInsertSchema(enquiries).omit({ id: true, createdAt: true });
-export const insertSiteSettingSchema = createInsertSchema(siteSettings).omit({ id: true });
-export const insertMediaItemSchema = createInsertSchema(mediaItems).omit({ id: true });
-export const insertDonationSchema = createInsertSchema(donations).omit({ id: true, createdAt: true });
-export const insertDsClientSchema = createInsertSchema(dsClients).omit({ id: true });
-export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true });
-export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
+export const insertArtistSchema = (createInsertSchema(artists) as any).omit({ id: true }) as any;
+export const insertEventSchema = (createInsertSchema(events) as any).omit({ id: true }) as any;
+export const insertEnquirySchema = (createInsertSchema(enquiries) as any).omit({ id: true, createdAt: true }) as any;
+export const insertSiteSettingSchema = (createInsertSchema(siteSettings) as any).omit({ id: true }) as any;
+export const insertMediaItemSchema = (createInsertSchema(mediaItems) as any).omit({ id: true }) as any;
+export const insertDonationSchema = (createInsertSchema(donations) as any).omit({ id: true, createdAt: true }) as any;
+export const insertDsClientSchema = (createInsertSchema(dsClients) as any).omit({ id: true }) as any;
+export const insertProductSchema = (createInsertSchema(products) as any).omit({ id: true, createdAt: true }) as any;
+export const insertOrderSchema = (createInsertSchema(orders) as any).omit({ id: true, createdAt: true }) as any;
 
 export type Artist = typeof artists.$inferSelect;
 export type InsertArtist = z.infer<typeof insertArtistSchema>;

@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { getVisibleFields } from "@shared/schema";
 import type { Product } from "@shared/schema";
 import { useCart } from "@/hooks/use-cart";
+import { openCartDrawer } from "@/components/cart-drawer";
 import {
   ShoppingCart,
   Heart,
@@ -385,6 +386,16 @@ export default function ProductDetailPage() {
               >
                 <ShoppingCart className="w-4 h-4" />
                 Cart
+              </Button>
+
+              <Button
+                variant="secondary"
+                className="flex-shrink-0 gap-1"
+                onClick={openCartDrawer}
+                data-testid="button-go-to-cart"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Go to Cart
               </Button>
 
               {stripeEnabled && (
