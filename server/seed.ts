@@ -250,6 +250,7 @@ export async function seedDatabase() {
     { key: "stripe_afterpay_enabled", value: "false", type: "toggle", section: "integrations_payments", label: "Enable Afterpay / Clearpay via Stripe" },
     // Global banner style settings
     { key: "global_logo_object_position", value: "center top", type: "text", section: "global", label: "Logo Image Position (e.g. center top, center, 50% 20%)" },
+    { key: "global_logo_height", value: "192", type: "text", section: "global", label: "Logo / Header Image Height (px)" },
     { key: "global_company_name_font_size", value: "12", type: "text", section: "global", label: "Site Name Font Size (px)" },
     { key: "global_company_name_color", value: "", type: "color", section: "global", label: "Site Name Color" },
     { key: "global_company_name_font", value: "", type: "font", section: "global", label: "Site Name Font" },

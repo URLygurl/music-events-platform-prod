@@ -34,6 +34,7 @@ export function TopRibbon() {
   const companyNameFontSize = get("global_company_name_font_size", "12");
   const companyNameColor = get("global_company_name_color", "");
   const companyNameFont = get("global_company_name_font", "");
+  const logoHeight = parseInt(get("global_logo_height", "192") || "192", 10);
 
   // Check Hermes visibility for admin users
   // Superadmin always sees it; admin only sees it when hermes_admin_visible is true
@@ -78,7 +79,7 @@ export function TopRibbon() {
       <div className="w-full border-b bg-background/90 backdrop-blur-md">
         <div className="relative w-full">
           {logoImage ? (
-            <img src={logoImage} alt="Logo" className="w-full h-24 object-cover" style={{ objectPosition: logoObjectPosition }} data-testid="img-logo" />
+            <img src={logoImage} alt="Logo" className="w-full object-cover" style={{ objectPosition: logoObjectPosition, height: `${logoHeight}px` }} data-testid="img-logo" />
           ) : (
             <div
               className="w-full h-32 border-b border-dashed border-muted-foreground/40 flex items-center justify-center"

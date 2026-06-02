@@ -63,12 +63,12 @@ export function ArtistTile({ artist }: ArtistTileProps) {
             )}
             {hasVideo && (
               <button
-                className="absolute bottom-2 right-2 w-8 h-8 rounded-full border bg-background/80 backdrop-blur-sm flex items-center justify-center shadow-md hover:bg-background transition-colors"
+                className="absolute bottom-2 right-2 w-11 h-11 rounded-full border-2 bg-background/80 backdrop-blur-sm flex items-center justify-center shadow-md hover:bg-background transition-colors"
                 onClick={handlePlay}
                 data-testid={`button-play-${artist.id}`}
                 title="Play video"
               >
-                <Play className="w-3.5 h-3.5 fill-foreground" />
+                <Play className="w-5 h-5 fill-foreground" />
               </button>
             )}
           </div>

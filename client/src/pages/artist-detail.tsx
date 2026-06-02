@@ -142,25 +142,25 @@ export default function ArtistDetailPage() {
         <div className="border-t pt-4 space-y-2">
           <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Contact</h3>
           {vis.email !== false && artist.email && (
-            <a href={`mailto:${artist.email}`} className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5" data-testid="link-email">
+            <a href={`mailto:${artist.email}`} className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5 text-primary underline-offset-2 hover:underline" data-testid="link-email">
               <Mail className="w-4 h-4 text-muted-foreground" />
               {artist.email}
             </a>
           )}
           {vis.phone !== false && artist.phone && (
-            <a href={`tel:${artist.phone}`} className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5" data-testid="link-phone">
+            <a href={`tel:${artist.phone}`} className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5 text-primary underline-offset-2 hover:underline" data-testid="link-phone">
               <Phone className="w-4 h-4 text-muted-foreground" />
               {artist.phone}
             </a>
           )}
           {vis.website !== false && artist.website && (
-            <a href={artist.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5" data-testid="link-website">
+            <a href={artist.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5 text-primary underline-offset-2 hover:underline" data-testid="link-website">
               <Globe className="w-4 h-4 text-muted-foreground" />
               {artist.website}
             </a>
           )}
           {vis.socialLinks !== false && artist.socialLinks && (
-            <a href={artist.socialLinks} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5" data-testid="link-social">
+            <a href={artist.socialLinks} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5 text-primary underline-offset-2 hover:underline" data-testid="link-social">
               <Globe className="w-4 h-4 text-muted-foreground" />
               {artist.socialLinks}
             </a>
@@ -179,7 +179,7 @@ export default function ArtistDetailPage() {
                   href={l.value}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5"
+                  className="flex items-center gap-2 text-sm hover-elevate rounded-md px-2 py-1.5 text-primary underline-offset-2 hover:underline"
                   data-testid={`link-${l.key}`}
                 >
                   <Icon className="w-4 h-4 text-muted-foreground" />
