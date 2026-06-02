@@ -903,7 +903,7 @@ export async function registerRoutes(
       const stripe = await getStripe();
       if (!stripe) return res.status(400).json({ message: "Stripe is not configured. Please add your Stripe Secret Key in the Integrations panel." });
 
-      const { items, successUrl, cancelUrl, customerEmail, metadata } = req.body;
+      const { items, successUrl, cancelUrl, customerEmail, customerName, metadata } = req.body;
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "No items provided" });
       }
@@ -939,6 +939,7 @@ export async function registerRoutes(
       await storage.createOrder({
         stripeSessionId: session.id,
         customerEmail: customerEmail || null,
+        customerName: customerName || metadata?.customerName || null,
         amountTotal: session.amount_total,
         currency: session.currency,
         status: "pending",
@@ -1062,7 +1063,7 @@ export async function registerRoutes(
       if (!clientId || !secret) {
         return res.status(400).json({ message: "PayPal is not configured. Please add your PayPal Client ID and Secret in the Integrations panel." });
       }
-      const { items, customerEmail, currency } = req.body;
+      const { items, customerEmail, customerName, currency, metadata } = req.body;
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "No items provided" });
       }
@@ -1123,11 +1124,12 @@ export async function registerRoutes(
       await storage.createOrder({
         stripeSessionId: `paypal_${ppOrder.id}`,
         customerEmail: customerEmail || null,
+        customerName: customerName || metadata?.customerName || null,
         amountTotal: totalAmount,
         currency: cur.toLowerCase(),
         status: "pending",
         items: JSON.stringify(items),
-        metadata: JSON.stringify({ provider: "paypal", paypalOrderId: ppOrder.id }),
+        metadata: JSON.stringify({ ...(metadata || {}), provider: "paypal", paypalOrderId: ppOrder.id }),
       });
       res.json({ url: approveLink, orderId: ppOrder.id });
     } catch (e: any) {
