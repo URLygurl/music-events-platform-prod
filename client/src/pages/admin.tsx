@@ -1374,6 +1374,16 @@ export default function AdminPage() {
                 localValues={localValues}
                 setLocal={setLocal}
               />
+
+              {currentSection.id === "ds" && (
+                <div className="mt-6 space-y-4">
+                  <FocalPointPicker
+                    value={localValues["ds_content_image_focal"] || "center"}
+                    onChange={(v) => setLocal("ds_content_image_focal", v)}
+                    previewSrc={localValues["ds_content_image"] || undefined}
+                  />
+                </div>
+              )}
               {sectionSettings.length > 0 && (
                 <div className="pt-2">
                   <Button
@@ -1611,6 +1621,85 @@ export default function AdminPage() {
                 localValues={localValues}
                 setLocal={setLocal}
               />
+
+              {currentSection.id === "global" && (
+                <div className="mt-6 space-y-4">
+                  <FocalPointPicker
+                    value={localValues["global_logo_image_focal"] || "center"}
+                    onChange={(v) => setLocal("global_logo_image_focal", v)}
+                    previewSrc={localValues["global_logo_image"] || undefined}
+                  />
+                </div>
+              )}
+              {currentSection.id === "wallpapers" && (
+                <div className="mt-6 space-y-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Wallpaper Image Focal Points</p>
+                  <FocalPointPicker
+                    value={localValues["bg_landing_focal"] || "center"}
+                    onChange={(v) => setLocal("bg_landing_focal", v)}
+                    previewSrc={localValues["bg_landing"] || undefined}
+                  />
+                  <FocalPointPicker
+                    value={localValues["bg_artists_focal"] || "center"}
+                    onChange={(v) => setLocal("bg_artists_focal", v)}
+                    previewSrc={localValues["bg_artists"] || undefined}
+                  />
+                  <FocalPointPicker
+                    value={localValues["bg_events_focal"] || "center"}
+                    onChange={(v) => setLocal("bg_events_focal", v)}
+                    previewSrc={localValues["bg_events"] || undefined}
+                  />
+                  <FocalPointPicker
+                    value={localValues["bg_ds_focal"] || "center"}
+                    onChange={(v) => setLocal("bg_ds_focal", v)}
+                    previewSrc={localValues["bg_ds"] || undefined}
+                  />
+                  <FocalPointPicker
+                    value={localValues["bg_login_focal"] || "center"}
+                    onChange={(v) => setLocal("bg_login_focal", v)}
+                    previewSrc={localValues["bg_login"] || undefined}
+                  />
+                  <FocalPointPicker
+                    value={localValues["bg_shop_focal"] || "center"}
+                    onChange={(v) => setLocal("bg_shop_focal", v)}
+                    previewSrc={localValues["bg_shop"] || undefined}
+                  />
+                  <FocalPointPicker
+                    value={localValues["bg_landing_table_focal"] || "center"}
+                    onChange={(v) => setLocal("bg_landing_table_focal", v)}
+                    previewSrc={localValues["bg_landing_table"] || undefined}
+                  />
+                </div>
+              )}
+              {currentSection.id === "animations" && (
+                <div className="mt-6 space-y-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Animation Background Focal Points</p>
+                  <FocalPointPicker
+                    value={localValues["anim_box_1_bg_focal"] || "center"}
+                    onChange={(v) => setLocal("anim_box_1_bg_focal", v)}
+                    previewSrc={localValues["anim_box_1_bg"] || undefined}
+                  />
+                  <FocalPointPicker
+                    value={localValues["anim_box_2_bg_focal"] || "center"}
+                    onChange={(v) => setLocal("anim_box_2_bg_focal", v)}
+                    previewSrc={localValues["anim_box_2_bg"] || undefined}
+                  />
+                  <FocalPointPicker
+                    value={localValues["anim_box_3_bg_focal"] || "center"}
+                    onChange={(v) => setLocal("anim_box_3_bg_focal", v)}
+                    previewSrc={localValues["anim_box_3_bg"] || undefined}
+                  />
+                </div>
+              )}
+              {currentSection.id === "login" && (
+                <div className="mt-6 space-y-4">
+                  <FocalPointPicker
+                    value={localValues["login_header_image_focal"] || "center"}
+                    onChange={(v) => setLocal("login_header_image_focal", v)}
+                    previewSrc={localValues["login_header_image"] || undefined}
+                  />
+                </div>
+              )}
               {currentSection.id === "style" && (
                 <FontUploadSection localValues={localValues} setLocal={setLocal} />
               )}
