@@ -345,7 +345,7 @@ export async function registerRoutes(
       res.status(201).json(enquiry);
 
       tryAppendToSheet("google_sheet_enquiries", [
-        [parsed.data.name, parsed.data.email, parsed.data.message || "", new Date().toISOString()],
+        [parsed.data.name, parsed.data.email, (parsed.data as any).phone || "", (parsed.data as any).subject || "", parsed.data.message || "", new Date().toISOString()],
       ]);
     } catch (error) {
       console.error("Error creating enquiry:", error);
@@ -360,6 +360,22 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching enquiries:", error);
       res.status(500).json({ message: "Failed to fetch enquiries" });
+    }
+  });
+
+  app.get("/api/enquiries/export/csv", isAdmin, async (_req, res) => {
+    try {
+      const rows = await storage.getEnquiries();
+      const header = "ID,Name,Email,Phone,Subject,Message,Date\n";
+      const csv = rows.map((r: any) =>
+        [r.id, r.name, r.email, r.phone || "", r.subject || "", (r.message || "").replace(/\n/g, " "), r.createdAt ? new Date(r.createdAt).toISOString() : ""]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
+      ).join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="enquiries-${Date.now()}.csv"`);
+      res.send(header + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed" });
     }
   });
 
@@ -525,6 +541,22 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching donations:", error);
       res.status(500).json({ message: "Failed to fetch donations" });
+    }
+  });
+
+  app.get("/api/donations/export/csv", isAdmin, async (_req, res) => {
+    try {
+      const rows = await storage.getDonations();
+      const header = "ID,Name,Email,Amount,Message,Date\n";
+      const csv = rows.map((r: any) =>
+        [r.id, r.name, r.email, r.amount, (r.message || "").replace(/\n/g, " "), r.createdAt ? new Date(r.createdAt).toISOString() : ""]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
+      ).join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="donations-${Date.now()}.csv"`);
+      res.send(header + csv);
+    } catch (error) {
+      res.status(500).json({ message: "Export failed" });
     }
   });
 
@@ -808,18 +840,18 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
+  app.get("/api/products/all", isAdmin, async (_req, res) => {
+    try {
+      res.json(await storage.getProducts());
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
   app.get("/api/products/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const product = await storage.getProduct(id);
       if (!product || !product.active) return res.status(404).json({ message: "Product not found" });
       res.json(product);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
-  });
-
-  app.get("/api/products/all", isAdmin, async (_req, res) => {
-    try {
-      res.json(await storage.getProducts());
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 

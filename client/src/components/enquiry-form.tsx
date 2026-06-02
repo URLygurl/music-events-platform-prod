@@ -19,6 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 const enquiryFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email required"),
+  phone: z.string().optional(),
+  subject: z.string().optional(),
   message: z.string().optional(),
 });
 
@@ -28,7 +30,7 @@ export function EnquiryForm({ title = "Enquire / Subscribe" }: { title?: string 
   const { toast } = useToast();
   const form = useForm<EnquiryFormValues>({
     resolver: zodResolver(enquiryFormSchema),
-    defaultValues: { name: "", email: "", message: "" },
+    defaultValues: { name: "", email: "", phone: "", subject: "", message: "" },
   });
 
   const mutation = useMutation({
@@ -52,14 +54,42 @@ export function EnquiryForm({ title = "Enquire / Subscribe" }: { title?: string 
       </h3>
       <Form {...form}>
         <form onSubmit={form.handleSubmit((d) => mutation.mutate(d))} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Name *</FormLabel>
+                  <FormControl>
+                    <Input {...field} data-testid="input-enquiry-name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Phone</FormLabel>
+                  <FormControl>
+                    <Input type="tel" {...field} value={field.value || ""} data-testid="input-enquiry-phone" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <FormField
             control={form.control}
-            name="name"
+            name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs">Name</FormLabel>
+                <FormLabel className="text-xs">Email *</FormLabel>
                 <FormControl>
-                  <Input {...field} data-testid="input-enquiry-name" />
+                  <Input type="email" {...field} data-testid="input-enquiry-email" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -67,12 +97,12 @@ export function EnquiryForm({ title = "Enquire / Subscribe" }: { title?: string 
           />
           <FormField
             control={form.control}
-            name="email"
+            name="subject"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs">Email</FormLabel>
+                <FormLabel className="text-xs">Subject</FormLabel>
                 <FormControl>
-                  <Input type="email" {...field} data-testid="input-enquiry-email" />
+                  <Input {...field} value={field.value || ""} placeholder="e.g. Booking enquiry, General question..." data-testid="input-enquiry-subject" />
                 </FormControl>
                 <FormMessage />
               </FormItem>

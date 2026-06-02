@@ -54,6 +54,7 @@ import {
   Bot,
   ShoppingBag,
   DollarSign,
+  Inbox,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -86,6 +87,7 @@ const SECTIONS = [
   { id: "shop_page", label: "Shop Page", icon: ShoppingBag },
   { id: "shop", label: "Manage Shop", icon: ShoppingBag },
   { id: "orders", label: "Orders", icon: DollarSign },
+  { id: "submissions", label: "Submissions", icon: Inbox },
   { id: "users", label: "User Roles", icon: ShieldCheck },
   { id: "activity", label: "Activity Log", icon: Activity },
 ] as const;
@@ -1457,6 +1459,8 @@ export default function AdminPage() {
                 </Card>
               )}
             </div>
+          ) : currentSection.id === "submissions" ? (
+            <SubmissionsPanel />
           ) : currentSection.id === "users" && isSuperAdmin ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
@@ -1677,5 +1681,96 @@ export default function AdminPage() {
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+function SubmissionsPanel() {
+  const { data: enquiries, isLoading: loadingEnq } = useQuery<any[]>({
+    queryKey: ["/api/enquiries"],
+    queryFn: () => fetch("/api/enquiries", { credentials: "include" }).then((r) => r.json()),
+  });
+  const { data: donations, isLoading: loadingDon } = useQuery<any[]>({
+    queryKey: ["/api/donations"],
+    queryFn: () => fetch("/api/donations", { credentials: "include" }).then((r) => r.json()),
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Enquiries */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Enquiries</h3>
+          <a href="/api/enquiries/export/csv" download>
+            <Button size="sm" variant="outline">
+              <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
+            </Button>
+          </a>
+        </div>
+        {loadingEnq ? (
+          <Skeleton className="h-24 w-full" />
+        ) : enquiries && enquiries.length > 0 ? (
+          <div className="space-y-2">
+            {enquiries.map((e: any) => (
+              <Card key={e.id} className="p-3 overflow-visible">
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="text-sm font-medium">{e.name}</p>
+                    <p className="text-xs text-muted-foreground">{e.email}{e.phone ? ` · ${e.phone}` : ""}</p>
+                    {e.subject && <p className="text-xs font-medium text-primary">{e.subject}</p>}
+                    {e.message && <p className="text-xs text-muted-foreground line-clamp-2">{e.message}</p>}
+                  </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {e.createdAt ? new Date(e.createdAt).toLocaleDateString() : ""}
+                  </span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="p-4 text-center overflow-visible">
+            <p className="text-sm text-muted-foreground">No enquiries yet.</p>
+          </Card>
+        )}
+      </div>
+
+      {/* Donations */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Donations</h3>
+          <a href="/api/donations/export/csv" download>
+            <Button size="sm" variant="outline">
+              <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
+            </Button>
+          </a>
+        </div>
+        {loadingDon ? (
+          <Skeleton className="h-24 w-full" />
+        ) : donations && donations.length > 0 ? (
+          <div className="space-y-2">
+            {donations.map((d: any) => (
+              <Card key={d.id} className="p-3 overflow-visible">
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">{d.name}</p>
+                    <p className="text-xs text-muted-foreground">{d.email}</p>
+                    {d.message && <p className="text-xs text-muted-foreground line-clamp-2">{d.message}</p>}
+                  </div>
+                  <div className="text-right space-y-0.5">
+                    <p className="text-sm font-semibold">{d.amount}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : ""}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="p-4 text-center overflow-visible">
+            <p className="text-sm text-muted-foreground">No donations yet.</p>
+          </Card>
+        )}
+      </div>
+    </div>
   );
 }

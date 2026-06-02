@@ -67,6 +67,8 @@ export async function seedDatabase() {
         created_at timestamp DEFAULT now()
       )
     `);
+    await db.execute(sql`ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS phone text`);
+    await db.execute(sql`ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS subject text`);
     console.log("[seed] Schema migrations applied successfully");
   } catch (err) {
     console.error("[seed] Migration warning (may already exist):", err);
