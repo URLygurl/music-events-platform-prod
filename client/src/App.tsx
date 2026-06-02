@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CustomFontLoader } from "@/components/custom-font-loader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConciergeWidget } from "@/components/concierge-widget";
+import { CartDrawer } from "@/components/cart-drawer";
 
 // Eagerly load the landing page (first paint)
 import LandingPage from "@/pages/landing";
@@ -71,6 +72,7 @@ function App() {
         <CustomFontLoader />
         <Toaster />
         <Router />
+        <CartDrawer />
         <ConciergeWidget />
       </TooltipProvider>
     </QueryClientProvider>
