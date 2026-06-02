@@ -67,11 +67,17 @@ export async function setupAuth(app: Express) {
   app.post("/api/login", async (req, res) => {
     const { username, password } = req.body as { username?: string; password?: string };
 
-    const adminUsername = process.env.ADMIN_USERNAME || "admin";
-    const adminPassword = process.env.ADMIN_PASSWORD;
+    // Support both SUPERADMIN_* and ADMIN_* env var naming conventions
+    const adminUsername =
+      process.env.SUPERADMIN_USERNAME ||
+      process.env.ADMIN_USERNAME ||
+      "admin";
+    const adminPassword =
+      process.env.SUPERADMIN_PASSWORD ||
+      process.env.ADMIN_PASSWORD;
 
     if (!adminPassword) {
-      return res.status(500).json({ message: "Server not configured: ADMIN_PASSWORD env var missing" });
+      return res.status(500).json({ message: "Server not configured: set SUPERADMIN_PASSWORD or ADMIN_PASSWORD env var" });
     }
 
     if (username !== adminUsername || password !== adminPassword) {
@@ -79,7 +85,10 @@ export async function setupAuth(app: Express) {
     }
 
     // Upsert the admin user in the DB so role lookups work
-    const adminEmail = process.env.ADMIN_EMAIL || "melbazpeach@gmail.com";
+    const adminEmail =
+      process.env.SUPERADMIN_EMAIL ||
+      process.env.ADMIN_EMAIL ||
+      "melbazpeach@gmail.com";
 
     // Find existing user by email
     const [existing] = await db.select().from(users).where(eq(users.email, adminEmail));
