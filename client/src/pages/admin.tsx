@@ -957,6 +957,7 @@ export default function AdminPage() {
   const { data: dsClientsList, isLoading: loadingDsClients } = useQuery<DsClient[]>({
     queryKey: ["/api/ds-clients"],
   });
+  const [dsClientSearch, setDsClientSearch] = useState("");
   const { data: productsList, isLoading: loadingProducts } = useQuery<Product[]>({
     queryKey: ["/api/products/all"],
   });
@@ -1364,20 +1365,28 @@ export default function AdminPage() {
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mb-3">
                   <Eye className="w-3 h-3" /> Use the eye icon on each field to control visibility on the public page
                 </p>
+                <Input
+                  placeholder="Search client profiles..."
+                  value={dsClientSearch}
+                  onChange={(e) => setDsClientSearch(e.target.value)}
+                  className="mb-3"
+                />
               </div>
 
               {loadingDsClients ? (
                 <Skeleton className="h-40 w-full" />
               ) : (
-                dsClientsList?.map((client) => (
-                  <DsClientEditor
-                    key={client.id}
-                    client={client}
-                    onSave={(id, data) => dsClientMutation.mutate({ id, data })}
-                    onDelete={(id) => deleteDsClientMutation.mutate(id)}
-                    saving={dsClientMutation.isPending}
-                  />
-                ))
+                (dsClientsList || [])
+                  .filter((c) => !dsClientSearch || c.name?.toLowerCase().includes(dsClientSearch.toLowerCase()) || c.genre?.toLowerCase().includes(dsClientSearch.toLowerCase()))
+                  .map((client) => (
+                    <DsClientEditor
+                      key={client.id}
+                      client={client}
+                      onSave={(id, data) => dsClientMutation.mutate({ id, data })}
+                      onDelete={(id) => deleteDsClientMutation.mutate(id)}
+                      saving={dsClientMutation.isPending}
+                    />
+                  ))
               )}
               <Button
                 variant="outline"
