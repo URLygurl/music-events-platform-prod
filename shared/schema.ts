@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -159,13 +159,17 @@ export const uploadedFiles = pgTable("uploaded_files", {
 export const hermesSquad = pgTable("hermes_squad", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   handle: varchar("handle", { length: 50 }).notNull().unique(),
-  role: varchar("role", { length: 100 }).notNull(),
-  tier: varchar("tier", { length: 50 }).notNull().default("INTERNAL"),
-  symbol: varchar("symbol", { length: 10 }).default("🤖"),
+  name: text("name").notNull(),
+  alias: text("alias"),
+  role: text("role").notNull(),
+  tier: text("tier").notNull().default("SPECIALIST"),
+  symbol: text("symbol").default("◉"),
+  color: text("color").default("#d94a1f"),
+  status: text("status").notNull().default("offline"),
   persona: text("persona"),
   intent: text("intent"),
-  sourceUrls: text("source_urls"),
-  triggerPhrases: text("trigger_phrases"),
+  sourceUrls: jsonb("source_urls").$type<string[]>().default([]),
+  triggerPhrases: jsonb("trigger_phrases").$type<string[]>().default([]),
   isPublic: boolean("is_public").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: integer("sort_order").default(0),

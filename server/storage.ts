@@ -274,14 +274,20 @@ Object.assign(DatabaseStorage.prototype, {
   },
   async upsertSquadMember(data: InsertHermesSquadMember): Promise<HermesSquadMember> {
     const upperHandle = data.handle.toUpperCase();
+    const payload = {
+      ...data,
+      handle: upperHandle,
+      name: (data as any).name || upperHandle,
+      role: (data as any).role || "Specialist",
+    };
     const existing = await db.select().from(hermesSquad).where(eq(hermesSquad.handle, upperHandle));
     if (existing.length > 0) {
       const [updated] = await db.update(hermesSquad)
-        .set({ ...data, handle: upperHandle, updatedAt: new Date() })
+        .set({ ...payload, updatedAt: new Date() })
         .where(eq(hermesSquad.handle, upperHandle)).returning();
       return updated;
     }
-    const [created] = await db.insert(hermesSquad).values({ ...data, handle: upperHandle }).returning();
+    const [created] = await db.insert(hermesSquad).values(payload).returning();
     return created;
   },
   async deleteSquadMember(handle: string): Promise<void> {

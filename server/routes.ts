@@ -1481,10 +1481,17 @@ export async function registerRoutes(
     }
   });
 
-  // PUT /api/hermes/squad/members/:handle — upsert a squad member (hermesAuth)
-  app.put("/api/hermes/squad/members/:handle", hermesAuth, async (req: any, res: any) => {
+  // PUT /api/hermes/squad/members/:handle — upsert a squad member (superadmin token required)
+  app.put("/api/hermes/squad/members/:handle", hermesTokenRequired, async (req: any, res: any) => {
     try {
       const member = await (storage as any).upsertSquadMember({ ...req.body, handle: req.params.handle });
+      await db.insert(activityLog).values({
+        action: "Hermes squad member saved",
+        entityType: "hermes_squad",
+        entityId: member.id,
+        details: member.handle,
+        agent: "hermes",
+      });
       res.json({ member });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1495,6 +1502,12 @@ export async function registerRoutes(
   app.delete("/api/hermes/squad/members/:handle", hermesTokenRequired, async (req: any, res: any) => {
     try {
       await (storage as any).deleteSquadMember(req.params.handle);
+      await db.insert(activityLog).values({
+        action: "Hermes squad member deleted",
+        entityType: "hermes_squad",
+        details: String(req.params.handle).toUpperCase(),
+        agent: "hermes",
+      });
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1552,12 +1565,27 @@ export async function registerRoutes(
         .orderBy(desc(activityLog.createdAt))
         .limit(100);
 
-      // Map last-seen activity to each agent
+      const savedMembers = await (storage as any).getSquadMembers().catch(() => []);
+      const savedByHandle = new Map(savedMembers.map((member: any) => [String(member.handle).toUpperCase(), member]));
+
+      // Map last-seen activity and DB customisations to each agent.
       const agentsWithActivity = AGENT_REGISTRY.map((agent) => {
-        // For now, Hermes owns all logged activity
+        const saved = savedByHandle.get(agent.name.toUpperCase()) || savedByHandle.get(agent.id.toUpperCase());
         const agentLogs = agent.id === "hermes" ? recentLogs : [];
         return {
           ...agent,
+          name: saved?.name || agent.name,
+          alias: saved?.alias || agent.alias,
+          role: saved?.role || agent.role,
+          tier: saved?.tier || agent.tier,
+          symbol: saved?.symbol || agent.symbol,
+          color: saved?.color || agent.color,
+          status: saved?.status || (saved?.isActive === false ? "offline" : agent.status),
+          isPublic: saved?.isPublic ?? (agent as any).isPublic ?? false,
+          persona: saved?.persona || null,
+          intent: saved?.intent || null,
+          sourceUrls: saved?.sourceUrls || [],
+          triggerPhrases: saved?.triggerPhrases || [],
           lastActivity: agentLogs[0] || null,
           recentActions: agentLogs.slice(0, 5),
           totalActions: agentLogs.length,

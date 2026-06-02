@@ -269,19 +269,42 @@ export async function seedDatabase() {
         handle TEXT NOT NULL UNIQUE,
         name TEXT NOT NULL,
         alias TEXT,
-        role TEXT,
+        role TEXT NOT NULL,
         tier TEXT DEFAULT 'SPECIALIST',
         symbol TEXT DEFAULT '◉',
         color TEXT DEFAULT '#d94a1f',
         status TEXT DEFAULT 'offline',
-        is_public BOOLEAN DEFAULT FALSE,
+        persona TEXT,
         intent TEXT,
         source_urls JSONB DEFAULT '[]',
+        trigger_phrases JSONB DEFAULT '[]',
+        is_public BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
         sort_order INTEGER DEFAULT 99,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
+    // Align older Hermes roster tables with the shared Drizzle schema.
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS name TEXT`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS alias TEXT`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS role TEXT`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS tier TEXT DEFAULT 'SPECIALIST'`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS symbol TEXT DEFAULT '◉'`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS color TEXT DEFAULT '#d94a1f'`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'offline'`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS persona TEXT`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS intent TEXT`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS source_urls JSONB DEFAULT '[]'`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS trigger_phrases JSONB DEFAULT '[]'`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+    await db.execute(sql`ALTER TABLE hermes_squad ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 99`);
+    await db.execute(sql`UPDATE hermes_squad SET name = handle WHERE name IS NULL`);
+    await db.execute(sql`UPDATE hermes_squad SET role = COALESCE(role, 'Specialist') WHERE role IS NULL`);
+    await db.execute(sql`UPDATE hermes_squad SET tier = COALESCE(tier, 'SPECIALIST') WHERE tier IS NULL`);
+    await db.execute(sql`UPDATE hermes_squad SET status = COALESCE(status, CASE WHEN is_active THEN 'active' ELSE 'offline' END, 'offline') WHERE status IS NULL`);
+
     // Create hermes_messages table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS hermes_messages (
