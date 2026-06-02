@@ -1363,10 +1363,10 @@ export async function registerRoutes(
     }
   });
 
-  // POST /api/hermes/chat — send a message to Hermes AI (token required, or admin if chat_visible)
+  // POST /api/hermes/chat — send a message to a squad specialist (hermesAuth required)
+  // Body: { messages: [{role, content}], specialist?: "HERMES" | "NEIL" | "DIME" etc }
   app.post("/api/hermes/chat", hermesAuth, async (req: any, res: any) => {
     try {
-      // If accessed via session (admin), check chat visibility toggle
       if (req.hermesUser?.via === "session") {
         const chatVisible = await storage.getSetting("hermes_chat_visible");
         if (chatVisible?.value === "false") {
@@ -1377,15 +1377,99 @@ export async function registerRoutes(
       if (!settings.apiKey) {
         return res.status(400).json({ message: "No AI API key configured. Set it in Integrations." });
       }
-      const { messages } = req.body;
+      const { messages, specialist } = req.body;
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ message: "messages array required" });
       }
-      const systemPrompt = `You are Hermes, the backend operations assistant for this platform. You have access to platform statistics and can help the superadmin manage the system. Be concise, technical, and helpful.`;
+      // Look up specialist system prompt from DB, fall back to Hermes default
+      let systemPrompt = `You are Hermes, the backend operations assistant for this music platform. You help the admin team manage the system. Be concise, technical, and helpful.`;
+      if (specialist) {
+        const member = await (storage as any).getSquadMember(specialist);
+        if (member?.intent) systemPrompt = member.intent;
+      }
       const reply = await callConciergeAI(messages, systemPrompt, settings);
-      res.json({ reply });
+      // Save to message history
+      const userEmail = req.hermesUser?.email || "admin";
+      const handle = (specialist || "HERMES").toUpperCase();
+      if (messages.length > 0) {
+        const last = messages[messages.length - 1];
+        await (storage as any).saveHermesMessage({ specialistHandle: handle, role: last.role, content: last.content, userEmail, isPublic: false });
+      }
+      await (storage as any).saveHermesMessage({ specialistHandle: handle, role: "assistant", content: reply, userEmail, isPublic: false });
+      res.json({ reply, specialist: handle });
     } catch (e: any) {
       res.status(500).json({ message: e.message || "Chat failed" });
+    }
+  });
+
+  // POST /api/hermes/neil — PUBLIC endpoint for the crowd-facing Neil concierge widget
+  // No auth required. Injects event context if eventId is provided.
+  app.post("/api/hermes/neil", async (req: any, res: any) => {
+    try {
+      const settings = await getConciergeSettings();
+      if (!settings.apiKey) {
+        return res.status(503).json({ message: "Neil is temporarily offline. Please ask a crew member for help." });
+      }
+      const { messages, eventId, sessionId } = req.body;
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ message: "messages array required" });
+      }
+      // Get Neil's intent from DB
+      const neil = await (storage as any).getSquadMember("NEIL");
+      let systemPrompt = neil?.intent || `You are Neil, a friendly gig concierge at a live music venue. Help attendees with wayfinding, set times, and local info. Keep answers short and warm — two sentences max.`;
+      // Inject event context if eventId provided
+      if (eventId) {
+        const event = await storage.getEvent(Number(eventId));
+        if (event) {
+          systemPrompt += `\n\n## Tonight's Event\nEvent: ${event.name}\nVenue: ${(event as any).venue || "TBC"}\nDate: ${(event as any).date || "Today"}\nTime: ${event.time || "TBC"}\nAddress: ${(event as any).address || "See event page"}\nDescription: ${event.description || ""}\n`;
+        }
+      }
+      // Inject artist lineup
+      const allArtists = await storage.getArtists();
+      if (allArtists.length > 0) {
+        const artistList = allArtists.slice(0, 20).map((a: any) => `- ${a.name} (${a.genre || ""})${a.timeSlot ? " at " + a.timeSlot : ""}`).join("\n");
+        systemPrompt += `\n## Artists on the Lineup\n${artistList}\n`;
+      }
+      const reply = await callConciergeAI(messages, systemPrompt, settings);
+      // Save to DB
+      if (messages.length > 0) {
+        const last = messages[messages.length - 1];
+        await (storage as any).saveHermesMessage({ specialistHandle: "NEIL", role: last.role, content: last.content, sessionId: sessionId || null, isPublic: true, eventId: eventId ? Number(eventId) : null });
+      }
+      await (storage as any).saveHermesMessage({ specialistHandle: "NEIL", role: "assistant", content: reply, sessionId: sessionId || null, isPublic: true, eventId: eventId ? Number(eventId) : null });
+      res.json({ reply, specialist: "NEIL" });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message || "Neil is temporarily unavailable" });
+    }
+  });
+
+  // GET /api/hermes/squad/members — get squad members from DB (hermesAuth)
+  app.get("/api/hermes/squad/members", hermesAuth, async (_req: any, res: any) => {
+    try {
+      const members = await (storage as any).getSquadMembers();
+      res.json({ members });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // PUT /api/hermes/squad/members/:handle — upsert a squad member (hermesAuth)
+  app.put("/api/hermes/squad/members/:handle", hermesAuth, async (req: any, res: any) => {
+    try {
+      const member = await (storage as any).upsertSquadMember({ ...req.body, handle: req.params.handle });
+      res.json({ member });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // DELETE /api/hermes/squad/members/:handle — delete a squad member (hermesTokenRequired)
+  app.delete("/api/hermes/squad/members/:handle", hermesTokenRequired, async (req: any, res: any) => {
+    try {
+      await (storage as any).deleteSquadMember(req.params.handle);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
     }
   });
 
@@ -1407,8 +1491,10 @@ export async function registerRoutes(
       // status: "active" | "idle" | "offline"
       // When an agent is integrated, set status to "active" and wire its activity log tagging.
       const AGENT_REGISTRY = [
-        // ─── MASTER ───────────────────────────────────────────────────
-        { id: "hermes",   name: "HERMES",   alias: "The Anima",          role: "Orchestrator + memory",       tier: "MASTER",   symbol: "◉",  color: "#d94a1f", status: "active" },
+        // ─── MASTER ─────────────────────────────────────────────────
+        { id: "hermes",   name: "HERMES",   alias: "The Anima",          role: "Orchestrator + memory",       tier: "MASTER",       symbol: "◉",  color: "#d94a1f", status: "active" },
+        // ─── FRONT OF HOUSE ──────────────────────────────────────
+        { id: "neil",     name: "NEIL",     alias: "Gig Concierge",       role: "Crowd-facing attendee help",  tier: "FRONT OF HOUSE", symbol: "🎟",  color: "#2e6b4f", status: "active", isPublic: true },
         // ─── CREATIVE ───────────────────────────────────────────────
         { id: "lemmy",    name: "LEMMY",    alias: "Head of A&R",         role: "Genre + reference vault",     tier: "CREATIVE", symbol: "🤘", color: "#7a2e0d", status: "offline" },
         // ─── STUDIO ──────────────────────────────────────────────────

@@ -60,19 +60,23 @@ export function ConciergeWidget() {
     },
   });
 
-  // Chat mutation
+  // Chat mutation — routes through Neil (public endpoint, no auth required)
   const chatMutation = useMutation({
     mutationFn: async (msgs: Message[]) => {
-      const res = await apiRequest("POST", "/api/concierge/chat", { messages: msgs });
+      const res = await apiRequest("POST", "/api/hermes/neil", { messages: msgs });
       return res.json();
     },
     onSuccess: (data) => {
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
     },
     onError: (error: any) => {
+      const raw = error.message || "";
+      const friendly = raw.includes("401") || raw.toLowerCase().includes("log in")
+        ? "You need to be logged in to chat with me. Log in above and come back! 🎵"
+        : raw || "Sorry, I couldn't process that. Please try again.";
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: error.message || "Sorry, I couldn't process that. Please try again." },
+        { role: "assistant", content: friendly },
       ]);
     },
   });
@@ -138,8 +142,7 @@ export function ConciergeWidget() {
   // Don't render if not enabled or no API key
   if (!conciergeSettings?.enabled || !conciergeSettings?.hasApiKey) return null;
 
-  // Don't render if not public and user not logged in
-  if (!conciergeSettings.publicAccess && !user) return null;
+  // Neil is always public — no login required
 
   const concierge_name = conciergeSettings.name || "Concierge";
 

@@ -261,5 +261,64 @@ export async function seedDatabase() {
     await db.insert(siteSettings).values(s).onConflictDoNothing({ target: siteSettings.key });
   }
 
+  // Create hermes_squad table
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS hermes_squad (
+        id SERIAL PRIMARY KEY,
+        handle TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        alias TEXT,
+        role TEXT,
+        tier TEXT DEFAULT 'SPECIALIST',
+        symbol TEXT DEFAULT '◉',
+        color TEXT DEFAULT '#d94a1f',
+        status TEXT DEFAULT 'offline',
+        is_public BOOLEAN DEFAULT FALSE,
+        intent TEXT,
+        source_urls JSONB DEFAULT '[]',
+        sort_order INTEGER DEFAULT 99,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    // Create hermes_messages table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS hermes_messages (
+        id SERIAL PRIMARY KEY,
+        specialist_handle TEXT NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        user_email TEXT,
+        session_id TEXT,
+        event_id INTEGER,
+        is_public BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    // Seed Neil — Specialist No.14, Gig Concierge
+    await db.execute(sql`
+      INSERT INTO hermes_squad (handle, name, alias, role, tier, symbol, color, status, is_public, intent, source_urls, sort_order)
+      VALUES (
+        'NEIL',
+        'NEIL',
+        'Gig Concierge',
+        'Crowd-facing attendee help',
+        'FRONT OF HOUSE',
+        '🎟',
+        '#2e6b4f',
+        'active',
+        true,
+        'You are Neil, Specialist No.14 in the DefPirate roster — the crowd-facing gig and festival concierge. You are the friendly local who has been to every show at this venue. Warm, never corporate, you know the history and the back routes. Answer a punter''s question in two sentences, then point them at the next thing worth seeing. Never make someone feel dumb for asking where the loos are. Trigger on ANY attendee-facing, day-of-show question: wayfinding (toilets, water, bars, first aid, exits, ATMs, accessible routes), venue heritage, local-area recommendations (food, parking, transport, after-show), and today''s lineup/set-time/stage knowledge. Answer SHORT and warm — two sentences max, then optionally point to the next worthwhile thing. Always anchor wayfinding to the event''s own map/zones, never guess a layout. For safety items (first aid, exits, lost child, welfare), be calm, specific, and direct them to the nearest staffed point. Pull set times and artist info from the event data injected at runtime — NEVER invent a set time. NZ context: 230V, te reo place names spelled correctly, walking times in minutes. Defer crew/load-in/technical questions to OZZY and editorial scene questions to GIGGUIDE — you serve the crowd, not the production.',
+        '["https://www.ticketfairy.com/blog/festival-signage-and-wayfinding-systems-enhancing-navigation-and-safety", "https://en.wikipedia.org/wiki/Music_of_New_Zealand"]',
+        1
+      )
+      ON CONFLICT (handle) DO NOTHING
+    `);
+    console.log("[seed] Hermes squad tables ready, Neil seeded.");
+  } catch (err) {
+    console.error("[seed] Hermes squad migration warning:", err);
+  }
+
   console.log("Seeding complete.");
 }

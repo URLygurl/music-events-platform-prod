@@ -156,6 +156,42 @@ export const uploadedFiles = pgTable("uploaded_files", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const hermesSquad = pgTable("hermes_squad", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  handle: varchar("handle", { length: 50 }).notNull().unique(),
+  role: varchar("role", { length: 100 }).notNull(),
+  tier: varchar("tier", { length: 50 }).notNull().default("INTERNAL"),
+  symbol: varchar("symbol", { length: 10 }).default("🤖"),
+  persona: text("persona"),
+  intent: text("intent"),
+  sourceUrls: text("source_urls"),
+  triggerPhrases: text("trigger_phrases"),
+  isPublic: boolean("is_public").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const hermesMessages = pgTable("hermes_messages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  specialistHandle: varchar("specialist_handle", { length: 50 }).notNull(),
+  role: varchar("role", { length: 20 }).notNull(),
+  content: text("content").notNull(),
+  userEmail: varchar("user_email", { length: 255 }),
+  sessionId: varchar("session_id", { length: 100 }),
+  isPublic: boolean("is_public").default(false),
+  eventId: integer("event_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertHermesSquadSchema = createInsertSchema(hermesSquad).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertHermesMessageSchema = createInsertSchema(hermesMessages).omit({ id: true, createdAt: true });
+export type HermesSquadMember = typeof hermesSquad.$inferSelect;
+export type HermesMessage = typeof hermesMessages.$inferSelect;
+export type InsertHermesSquadMember = z.infer<typeof insertHermesSquadSchema>;
+export type InsertHermesMessage = z.infer<typeof insertHermesMessageSchema>;
+
 export const insertArtistSchema = createInsertSchema(artists).omit({ id: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true });
 export const insertEnquirySchema = createInsertSchema(enquiries).omit({ id: true, createdAt: true });

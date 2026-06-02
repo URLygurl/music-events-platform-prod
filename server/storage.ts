@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import {
   artists, events, enquiries, siteSettings, mediaItems, donations, dsClients,
-  users, uploadedFiles, products, orders,
+  users, uploadedFiles, products, orders, hermesSquad, hermesMessages,
   type Artist, type InsertArtist,
   type Event, type InsertEvent,
   type Enquiry, type InsertEnquiry,
@@ -13,6 +13,8 @@ import {
   type Product, type InsertProduct,
   type Order, type InsertOrder,
   type User,
+  type HermesSquadMember, type InsertHermesSquadMember,
+  type HermesMessage, type InsertHermesMessage,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -261,6 +263,38 @@ Object.assign(DatabaseStorage.prototype, {
   async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
     const [updated] = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
     return updated;
+  },
+  // Hermes Squad
+  async getSquadMembers(): Promise<HermesSquadMember[]> {
+    return db.select().from(hermesSquad).orderBy(hermesSquad.sortOrder);
+  },
+  async getSquadMember(handle: string): Promise<HermesSquadMember | undefined> {
+    const [m] = await db.select().from(hermesSquad).where(eq(hermesSquad.handle, handle.toUpperCase()));
+    return m;
+  },
+  async upsertSquadMember(data: InsertHermesSquadMember): Promise<HermesSquadMember> {
+    const upperHandle = data.handle.toUpperCase();
+    const existing = await db.select().from(hermesSquad).where(eq(hermesSquad.handle, upperHandle));
+    if (existing.length > 0) {
+      const [updated] = await db.update(hermesSquad)
+        .set({ ...data, handle: upperHandle, updatedAt: new Date() })
+        .where(eq(hermesSquad.handle, upperHandle)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(hermesSquad).values({ ...data, handle: upperHandle }).returning();
+    return created;
+  },
+  async deleteSquadMember(handle: string): Promise<void> {
+    await db.delete(hermesSquad).where(eq(hermesSquad.handle, handle.toUpperCase()));
+  },
+  async saveHermesMessage(msg: InsertHermesMessage): Promise<HermesMessage> {
+    const [created] = await db.insert(hermesMessages).values(msg).returning();
+    return created;
+  },
+  async getHermesMessages(handle: string, limit = 50): Promise<HermesMessage[]> {
+    const all = await db.select().from(hermesMessages)
+      .where(eq(hermesMessages.specialistHandle, handle.toUpperCase()));
+    return all.slice(-limit);
   },
 });
 

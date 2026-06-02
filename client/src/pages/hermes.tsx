@@ -121,13 +121,14 @@ type TabId = "overview" | "activity" | "chat" | "squad" | "settings";
 // ─── Tier colours (matching naked-staff palette) ───────────────────────────
 
 const TIER_COLORS: Record<string, string> = {
-  MASTER:   "#9a3412",
-  CREATIVE: "#b45309",
-  STUDIO:   "#166534",
-  LIVE:     "#9a3412",
-  BUSINESS: "#1e40af",
-  CAMPAIGN: "#6b21a8",
-  TRADES:   "#374151",
+  MASTER:           "#9a3412",
+  "FRONT OF HOUSE": "#2e6b4f",
+  CREATIVE:         "#b45309",
+  STUDIO:           "#166534",
+  LIVE:             "#9a3412",
+  BUSINESS:         "#1e40af",
+  CAMPAIGN:         "#6b21a8",
+  TRADES:           "#374151",
 };
 
 // ─── Helper: format relative time ─────────────────────────────────────────
@@ -331,16 +332,30 @@ function ChatTab({
 }: {
   authHeader: Record<string, string>;
 }) {
+  const [specialist, setSpecialist] = useState("HERMES");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
       content:
-        "◉ Hermes online. I'm your backend operations assistant — ask me about platform stats, settings, or anything system-related.",
+        "◉ Hermes online. I'm your backend operations assistant — ask me about platform stats, settings, or anything system-related. Switch specialist above to talk to a squad member.",
     },
   ]);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Squad list for selector
+  const { data: squad } = useQuery<SquadData>({
+    queryKey: ["/api/hermes/squad"],
+    queryFn: async () => {
+      const res = await fetch("/api/hermes/squad", { credentials: "include", headers: authHeader });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    staleTime: 60000,
+  });
+
+  const squadOptions = squad?.agents ?? [];
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -354,7 +369,7 @@ function ChatTab({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify({ messages: msgs }),
+        body: JSON.stringify({ messages: msgs, specialist }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: "Chat failed" }));
@@ -392,6 +407,27 @@ function ChatTab({
 
   return (
     <div className="flex flex-col h-[calc(100vh-280px)] min-h-[400px]">
+      {/* Specialist selector */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <span className="text-xs text-muted-foreground font-mono">TALKING TO:</span>
+        {[{ id: "HERMES", name: "HERMES", symbol: "◉", color: "#9a3412" }, ...squadOptions].map((a) => (
+          <button
+            key={a.id}
+            onClick={() => {
+              setSpecialist(a.id === "HERMES" ? "HERMES" : (a as any).name);
+              setMessages([{ role: "assistant", content: `${(a as any).symbol || "◉"} ${(a as any).name || "HERMES"} online.${(a as any).role ? " " + (a as any).role + "." : ""}` }]);
+            }}
+            className={`px-2 py-0.5 rounded text-xs font-mono border transition-all ${
+              specialist === (a.id === "HERMES" ? "HERMES" : (a as any).name)
+                ? "text-white border-transparent"
+                : "bg-transparent text-muted-foreground border-border hover:border-foreground"
+            }`}
+            style={specialist === (a.id === "HERMES" ? "HERMES" : (a as any).name) ? { backgroundColor: (a as any).color || "#9a3412" } : {}}
+          >
+            {(a as any).symbol || "◉"} {(a as any).name || "HERMES"}
+          </button>
+        ))}
+      </div>
       {/* Messages */}
       <Card className="flex-1 overflow-hidden">
         <div ref={scrollRef} className="h-full overflow-y-auto p-4 space-y-3">
@@ -427,7 +463,7 @@ function ChatTab({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Hermes..."
+          placeholder={`Ask ${specialist}...`}
           className="resize-none min-h-[44px] max-h-[120px] text-sm"
           rows={1}
         />
@@ -467,7 +503,7 @@ function SquadTab({
     staleTime: 30000,
   });
 
-  const tierOrder = ["MASTER", "CREATIVE", "STUDIO", "LIVE", "BUSINESS", "CAMPAIGN", "TRADES"];
+  const tierOrder = ["MASTER", "FRONT OF HOUSE", "CREATIVE", "STUDIO", "LIVE", "BUSINESS", "CAMPAIGN", "TRADES"];
 
   const agentsByTier = squad?.agents.reduce<Record<string, AgentEntry[]>>((acc, agent) => {
     if (!acc[agent.tier]) acc[agent.tier] = [];
