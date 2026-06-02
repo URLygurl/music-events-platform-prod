@@ -82,7 +82,7 @@ export default function ProductDetailPage() {
     enabled: !!productId,
   });
 
-  const { addItem } = useCart();
+  const { addItem, count: cartCount } = useCart();
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [wishlisted, setWishlisted] = useState(false);
   const [showEnquiry, setShowEnquiry] = useState(false);
@@ -184,6 +184,7 @@ export default function ProductDetailPage() {
   const focal = (vf["imageFocal"] as unknown as string) || "center";
   const variants = parseVariants(product.visibleFields);
   const soldOut = product.stock != null && (product.stock as unknown as number) <= 0;
+  const hasCartItems = cartCount > 0;
 
   const handleAddToCart = () => {
     // Validate all variants selected
@@ -242,7 +243,7 @@ export default function ProductDetailPage() {
         )}
       </div>
 
-      <div className="px-4 py-6 space-y-6 pb-32">
+      <div className={`px-4 py-6 space-y-6 ${hasCartItems ? "pb-56" : "pb-32"}`}>
         {/* Title + wishlist */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -364,7 +365,7 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Sticky action bar */}
-      <div className="fixed bottom-16 left-0 right-0 px-4 pb-4 z-40 bg-gradient-to-t from-background via-background/95 to-transparent pt-6">
+      <div className={`fixed ${hasCartItems ? "bottom-32" : "bottom-16"} left-0 right-0 px-4 pb-4 z-40 bg-gradient-to-t from-background via-background/95 to-transparent pt-6 transition-[bottom] duration-200`}>
         <div className="flex gap-2">
           <Button
             variant="outline"
