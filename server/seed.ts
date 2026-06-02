@@ -105,6 +105,10 @@ export async function seedDatabase() {
       { key: "menu_show_integrations", value: "true", type: "toggle", section: "navigation", label: "Show Integrations in Menu" },
       { key: "global_company_name", value: "[ Company Name ]", type: "text", section: "global", label: "Company Name" },
       { key: "global_logo_image", value: "", type: "image", section: "global", label: "Logo / Header Image" },
+      { key: "global_logo_object_position", value: "center top", type: "text", section: "global", label: "Logo Image Position (e.g. center top, center, 50% 20%)" },
+      { key: "global_company_name_font_size", value: "12", type: "text", section: "global", label: "Site Name Font Size (px)" },
+      { key: "global_company_name_color", value: "", type: "color", section: "global", label: "Site Name Color" },
+      { key: "global_company_name_font", value: "", type: "font", section: "global", label: "Site Name Font" },
       { key: "global_primary_color", value: "#000000", type: "color", section: "style", label: "Primary Color" },
       { key: "global_secondary_color", value: "#ffffff", type: "color", section: "style", label: "Secondary Color" },
       { key: "global_accent_color", value: "#666666", type: "color", section: "style", label: "Accent Color" },
@@ -235,6 +239,11 @@ export async function seedDatabase() {
     { key: "ds_stream_title", value: "Now Streaming", type: "text", section: "ds", label: "Streaming Banner Title" },
     { key: "ds_stream_url", value: "", type: "text", section: "ds", label: "Stream URL (YouTube / Spotify / Bandcamp / SoundCloud)" },
     { key: "ds_stream_type", value: "", type: "text", section: "ds", label: "Stream Type (leave blank to auto-detect: youtube / spotify / bandcamp / soundcloud / apple_music / audio)" },
+    // Global banner style settings
+    { key: "global_logo_object_position", value: "center top", type: "text", section: "global", label: "Logo Image Position (e.g. center top, center, 50% 20%)" },
+    { key: "global_company_name_font_size", value: "12", type: "text", section: "global", label: "Site Name Font Size (px)" },
+    { key: "global_company_name_color", value: "", type: "color", section: "global", label: "Site Name Color" },
+    { key: "global_company_name_font", value: "", type: "font", section: "global", label: "Site Name Font" },
   ];
   for (const s of requiredSettings) {
     await db.insert(siteSettings).values(s).onConflictDoNothing({ target: siteSettings.key });

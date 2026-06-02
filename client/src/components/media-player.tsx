@@ -232,24 +232,26 @@ export function MediaPlayer() {
         </Card>
       )}
 
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 px-1">
+        <h3 className="text-sm font-semibold flex items-center gap-2 bg-background/90 backdrop-blur-sm px-2 py-1 rounded-lg">
           <Music className="w-4 h-4" />
           Media
         </h3>
-        <Button size="icon" variant="ghost" onClick={() => setShowPlaylist(!showPlaylist)}>
+        <Button size="icon" variant="ghost" className="bg-background/80 backdrop-blur-sm" onClick={() => setShowPlaylist(!showPlaylist)}>
           <List className="w-4 h-4" />
         </Button>
       </div>
 
       {showPlaylist && (
-        <div className="space-y-1">
+        <div className="space-y-2">
           {mediaItems.map((item, i) => (
             <button
               key={item.id}
               onClick={() => playItem(i)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${
-                currentIndex === i ? "bg-foreground text-background" : "hover-elevate"
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all border shadow-sm ${
+                currentIndex === i
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-background/95 backdrop-blur-sm border-border hover:border-foreground/30 hover:shadow-md"
               }`}
               data-testid={`button-play-media-${item.id}`}
             >

@@ -30,6 +30,10 @@ export function TopRibbon() {
 
   const companyName = get("global_company_name", "[ Company Name ]");
   const logoImage = get("global_logo_image");
+  const logoObjectPosition = get("global_logo_object_position", "center top");
+  const companyNameFontSize = get("global_company_name_font_size", "12");
+  const companyNameColor = get("global_company_name_color", "");
+  const companyNameFont = get("global_company_name_font", "");
 
   // Check Hermes visibility for admin users
   // Superadmin always sees it; admin only sees it when hermes_admin_visible is true
@@ -58,7 +62,15 @@ export function TopRibbon() {
   return (
     <header className="sticky top-0 z-50 w-full shadow-md">
       <div className="w-full border-b bg-background/90 backdrop-blur-md px-4 py-2">
-        <p className="text-center text-xs tracking-widest uppercase text-muted-foreground" data-testid="text-company-name">
+        <p
+          className="text-center tracking-widest uppercase text-muted-foreground"
+          style={{
+            fontSize: companyNameFontSize ? `${companyNameFontSize}px` : undefined,
+            color: companyNameColor || undefined,
+            fontFamily: companyNameFont || undefined,
+          }}
+          data-testid="text-company-name"
+        >
           {companyName}
         </p>
       </div>
@@ -66,7 +78,7 @@ export function TopRibbon() {
       <div className="w-full border-b bg-background/90 backdrop-blur-md">
         <div className="relative w-full">
           {logoImage ? (
-            <img src={logoImage} alt="Logo" className="w-full h-24 object-cover" data-testid="img-logo" />
+            <img src={logoImage} alt="Logo" className="w-full h-24 object-cover" style={{ objectPosition: logoObjectPosition }} data-testid="img-logo" />
           ) : (
             <div
               className="w-full h-32 border-b border-dashed border-muted-foreground/40 flex items-center justify-center"
