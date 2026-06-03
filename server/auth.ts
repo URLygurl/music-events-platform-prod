@@ -18,10 +18,11 @@
 
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import bcrypt from "bcryptjs";
 import type { Express, RequestHandler } from "express";
 import { db } from "./db";
 import { users, activityLog } from "@shared/models/auth";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 // ─── Session setup ────────────────────────────────────────────────────────────
 
@@ -67,7 +68,12 @@ export async function setupAuth(app: Express) {
   app.post("/api/login", async (req, res) => {
     const { username, password } = req.body as { username?: string; password?: string };
 
-    // Support both SUPERADMIN_* and ADMIN_* env var naming conventions
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required" });
+    }
+
+    // Support both SUPERADMIN_* and ADMIN_* env var naming conventions.
+    // This preserves Vanessa's original single superadmin login.
     const adminUsername =
       process.env.SUPERADMIN_USERNAME ||
       process.env.ADMIN_USERNAME ||
@@ -76,49 +82,60 @@ export async function setupAuth(app: Express) {
       process.env.SUPERADMIN_PASSWORD ||
       process.env.ADMIN_PASSWORD;
 
-    if (!adminPassword) {
-      return res.status(500).json({ message: "Server not configured: set SUPERADMIN_PASSWORD or ADMIN_PASSWORD env var" });
-    }
+    let userId: string | null = null;
 
-    if (username !== adminUsername || password !== adminPassword) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
+    if (adminPassword && username === adminUsername && password === adminPassword) {
+      // Upsert the superadmin user in the DB so role lookups work.
+      const adminEmail =
+        process.env.SUPERADMIN_EMAIL ||
+        process.env.ADMIN_EMAIL ||
+        "melbazpeach@gmail.com";
 
-    // Upsert the admin user in the DB so role lookups work
-    const adminEmail =
-      process.env.SUPERADMIN_EMAIL ||
-      process.env.ADMIN_EMAIL ||
-      "melbazpeach@gmail.com";
+      const [existing] = await db.select().from(users).where(eq(users.email, adminEmail));
 
-    // Find existing user by email
-    const [existing] = await db.select().from(users).where(eq(users.email, adminEmail));
+      if (existing) {
+        userId = existing.id;
+      } else {
+        const [created] = await db
+          .insert(users)
+          .values({
+            email: adminEmail,
+            firstName: "Admin",
+            role: "superadmin",
+          })
+          .returning();
+        userId = created.id;
+      }
 
-    let userId: string;
-    if (existing) {
-      userId = existing.id;
+      // If the configured superadmin exists but still has a normal user role, promote only
+      // when there is not already another superadmin.
+      if (existing && existing.role === "user") {
+        const [existingSuperAdmin] = await db
+          .select()
+          .from(users)
+          .where(eq(users.role, "superadmin"));
+        if (!existingSuperAdmin) {
+          await db.update(users).set({ role: "superadmin" }).where(eq(users.id, userId));
+        }
+      }
     } else {
-      // Create with superadmin role
-      const [created] = await db
-        .insert(users)
-        .values({
-          email: adminEmail,
-          firstName: "Admin",
-          role: "superadmin",
-        })
-        .returning();
-      userId = created.id;
-    }
-
-    // If existing user has no role or is just "user", promote to superadmin
-    // (only if no other superadmin exists)
-    if (existing && existing.role === "user") {
-      const [existingSuperAdmin] = await db
+      // Also support per-user database logins. This is required for admin users such
+      // as Cory, whose username/password_hash are stored in Neon rather than Railway.
+      const [existingUser] = await db
         .select()
         .from(users)
-        .where(eq(users.role, "superadmin"));
-      if (!existingSuperAdmin) {
-        await db.update(users).set({ role: "superadmin" }).where(eq(users.id, userId));
+        .where(sql`lower(${users.username}) = lower(${username}) OR lower(${users.email}) = lower(${username})`);
+
+      if (!existingUser?.passwordHash) {
+        return res.status(401).json({ message: "Invalid credentials" });
       }
+
+      const passwordMatches = await bcrypt.compare(password, existingUser.passwordHash);
+      if (!passwordMatches) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      userId = existingUser.id;
     }
 
     req.session.userId = userId;
