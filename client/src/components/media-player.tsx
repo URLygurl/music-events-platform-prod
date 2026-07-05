@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { HlsPlayer } from "@/components/hls-player";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,8 +56,6 @@ export function detectMediaType(url: string): string {
   if (url.includes("soundcloud.com")) return "soundcloud";
   if (url.includes("spotify.com")) return "spotify";
   if (url.includes("music.apple.com") || url.includes("embed.music.apple.com")) return "apple_music";
-  // Raw IP addresses or non-standard hosts serving HTML stream pages
-  if (/^https?:\/\/\d{1,3}(\.\d{1,3}){3}(:\d+)?/.test(url) || url.endsWith(".html") || url.endsWith(".htm")) return "iframe_stream";
   return "audio";
 }
 
@@ -159,20 +156,6 @@ export function MediaEmbed({
       <audio controls autoPlay className="w-full" data-testid={`player-audio-${item.id}`}>
         <source src={item.embedUrl} />
       </audio>
-    );
-  }
-
-  if (item.type === "iframe_stream") {
-    // Use the HLS proxy endpoint — resolves mixed-content and plays natively
-    const hlsSrc = "/stream/mvt/index.m3u8";
-    return (
-      <div className={`w-full ${expanded ? "aspect-video" : "aspect-video max-h-48"}`}>
-        <HlsPlayer
-          src={hlsSrc}
-          title={item.title}
-          className="w-full h-full rounded-md bg-black"
-        />
-      </div>
     );
   }
 

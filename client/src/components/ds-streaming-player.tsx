@@ -54,7 +54,6 @@ function typeLabel(type: string): string {
     spotify: "Spotify",
     apple_music: "Apple Music",
     audio: "Audio",
-    iframe_stream: "Live Stream",
   };
   return map[type] || type;
 }
@@ -158,12 +157,7 @@ export function SiteStreamingBanner() {
 
   if (!streamEnabled || !streamUrl) return null;
 
-  // Always re-detect for raw IP / HTML stream URLs — the stored type may be
-  // "audio" or "video" which would skip the iframe_stream renderer.
-  const detectedType = detectMediaType(streamUrl);
-  const type = detectedType === "iframe_stream" ? "iframe_stream" : (streamType || detectedType);
-  // Use the server-side proxy URL to avoid mixed-content (HTTP inside HTTPS) blocks
-  const resolvedStreamUrl = type === "iframe_stream" ? "/stream/mvt" : streamUrl;
+  const type = streamType || detectMediaType(streamUrl);
 
   return (
     <div className="space-y-2" data-testid="site-streaming-banner">
@@ -185,7 +179,7 @@ export function SiteStreamingBanner() {
           </div>
           <div className="p-3">
             <MediaEmbed
-              item={{ id: 0, title: streamTitle, type, embedUrl: resolvedStreamUrl }}
+              item={{ id: 0, title: streamTitle, type, embedUrl: streamUrl }}
               expanded={expanded}
             />
           </div>
@@ -202,7 +196,6 @@ export function SiteStreamingBanner() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">{streamTitle}</p>
             <p className="text-xs text-muted-foreground">{typeLabel(type)} · Tap to play</p>
-            {/* Raw URL is intentionally hidden from public view — the friendly title above is shown instead */}
           </div>
           <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         </button>

@@ -106,51 +106,6 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
-  // ── HLS stream proxy — proxies the HLS playlist and segments over HTTPS ──
-  // This avoids mixed-content blocks when the upstream stream is plain HTTP.
-  const HLS_UPSTREAM_BASE = "http://168.144.156.83:8080";
-
-  app.get("/stream/mvt/index.m3u8", async (_req, res) => {
-    try {
-      const upstream = await fetch(`${HLS_UPSTREAM_BASE}/hls/mvt/index.m3u8`);
-      if (!upstream.ok) return res.status(502).send("Stream unavailable");
-      let playlist = await upstream.text();
-      // Rewrite segment URLs in the playlist to go through our proxy
-      playlist = playlist.replace(
-        /^((?!#).+\.m3u8)$/gm,
-        (match) => `/stream/mvt/${encodeURIComponent(match)}`
-      );
-      playlist = playlist.replace(
-        /^((?!#).+\.ts)$/gm,
-        (match) => `/stream/mvt/${encodeURIComponent(match)}`
-      );
-      res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Cache-Control", "no-cache");
-      res.send(playlist);
-    } catch (err) {
-      console.error("HLS proxy m3u8 error:", err);
-      res.status(502).send("Stream unavailable");
-    }
-  });
-
-  app.get("/stream/mvt/:segment", async (req, res) => {
-    try {
-      const segment = decodeURIComponent(req.params.segment);
-      const upstream = await fetch(`${HLS_UPSTREAM_BASE}/hls/mvt/${segment}`);
-      if (!upstream.ok) return res.status(502).send("Segment unavailable");
-      const contentType = upstream.headers.get("content-type") || "video/MP2T";
-      res.setHeader("Content-Type", contentType);
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Cache-Control", "no-cache");
-      const body = await upstream.arrayBuffer();
-      res.send(Buffer.from(body));
-    } catch (err) {
-      console.error("HLS proxy segment error:", err);
-      res.status(502).send("Segment unavailable");
-    }
-  });
-
   app.get("/api/bootstrap-admin", isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req as any).user?.id;
