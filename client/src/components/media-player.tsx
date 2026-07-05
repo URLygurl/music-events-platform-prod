@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HlsPlayer } from "@/components/hls-player";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -162,15 +163,14 @@ export function MediaEmbed({
   }
 
   if (item.type === "iframe_stream") {
+    // Use the HLS proxy endpoint — resolves mixed-content and plays natively
+    const hlsSrc = "/stream/mvt/index.m3u8";
     return (
       <div className={`w-full ${expanded ? "aspect-video" : "aspect-video max-h-48"}`}>
-        <iframe
-          src={item.embedUrl}
-          className="w-full h-full rounded-md border-0"
-          allow="autoplay; fullscreen"
-          allowFullScreen
+        <HlsPlayer
+          src={hlsSrc}
           title={item.title}
-          data-testid={`player-iframe-stream-${item.id}`}
+          className="w-full h-full rounded-md bg-black"
         />
       </div>
     );
