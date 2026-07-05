@@ -158,7 +158,10 @@ export function SiteStreamingBanner() {
 
   if (!streamEnabled || !streamUrl) return null;
 
-  const type = streamType || detectMediaType(streamUrl);
+  // Always re-detect for raw IP / HTML stream URLs — the stored type may be
+  // "audio" or "video" which would skip the iframe_stream renderer.
+  const detectedType = detectMediaType(streamUrl);
+  const type = detectedType === "iframe_stream" ? "iframe_stream" : (streamType || detectedType);
 
   return (
     <div className="space-y-2" data-testid="site-streaming-banner">
