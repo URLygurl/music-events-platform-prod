@@ -106,6 +106,25 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
+  // ── Stream proxy — serves the ds_stream_url over HTTPS to avoid mixed-content blocks ──
+  app.get("/stream/mvt", async (_req, res) => {
+    try {
+      const setting = await storage.getSetting("ds_stream_url");
+      const streamUrl = setting?.value?.trim();
+      if (!streamUrl) return res.status(404).send("Stream not configured");
+      const upstream = await fetch(streamUrl);
+      const contentType = upstream.headers.get("content-type") || "text/html";
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      // Stream the body through
+      const body = await upstream.arrayBuffer();
+      res.send(Buffer.from(body));
+    } catch (err) {
+      console.error("Stream proxy error:", err);
+      res.status(502).send("Stream unavailable");
+    }
+  });
+
   app.get("/api/bootstrap-admin", isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req as any).user?.id;

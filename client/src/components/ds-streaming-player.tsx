@@ -162,6 +162,8 @@ export function SiteStreamingBanner() {
   // "audio" or "video" which would skip the iframe_stream renderer.
   const detectedType = detectMediaType(streamUrl);
   const type = detectedType === "iframe_stream" ? "iframe_stream" : (streamType || detectedType);
+  // Use the server-side proxy URL to avoid mixed-content (HTTP inside HTTPS) blocks
+  const resolvedStreamUrl = type === "iframe_stream" ? "/stream/mvt" : streamUrl;
 
   return (
     <div className="space-y-2" data-testid="site-streaming-banner">
@@ -183,7 +185,7 @@ export function SiteStreamingBanner() {
           </div>
           <div className="p-3">
             <MediaEmbed
-              item={{ id: 0, title: streamTitle, type, embedUrl: streamUrl }}
+              item={{ id: 0, title: streamTitle, type, embedUrl: resolvedStreamUrl }}
               expanded={expanded}
             />
           </div>
