@@ -56,6 +56,8 @@ export function detectMediaType(url: string): string {
   if (url.includes("soundcloud.com")) return "soundcloud";
   if (url.includes("spotify.com")) return "spotify";
   if (url.includes("music.apple.com") || url.includes("embed.music.apple.com")) return "apple_music";
+  // Raw IP addresses or non-standard hosts serving HTML stream pages
+  if (/^https?:\/\/\d{1,3}(\.\d{1,3}){3}(:\d+)?/.test(url) || url.endsWith(".html") || url.endsWith(".htm")) return "iframe_stream";
   return "audio";
 }
 
@@ -156,6 +158,21 @@ export function MediaEmbed({
       <audio controls autoPlay className="w-full" data-testid={`player-audio-${item.id}`}>
         <source src={item.embedUrl} />
       </audio>
+    );
+  }
+
+  if (item.type === "iframe_stream") {
+    return (
+      <div className={`w-full ${expanded ? "aspect-video" : "aspect-video max-h-48"}`}>
+        <iframe
+          src={item.embedUrl}
+          className="w-full h-full rounded-md border-0"
+          allow="autoplay; fullscreen"
+          allowFullScreen
+          title={item.title}
+          data-testid={`player-iframe-stream-${item.id}`}
+        />
+      </div>
     );
   }
 

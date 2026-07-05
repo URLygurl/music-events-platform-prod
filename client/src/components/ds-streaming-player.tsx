@@ -54,6 +54,7 @@ function typeLabel(type: string): string {
     spotify: "Spotify",
     apple_music: "Apple Music",
     audio: "Audio",
+    iframe_stream: "Live Stream",
   };
   return map[type] || type;
 }
@@ -196,6 +197,7 @@ export function SiteStreamingBanner() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">{streamTitle}</p>
             <p className="text-xs text-muted-foreground">{typeLabel(type)} · Tap to play</p>
+            {/* Raw URL is intentionally hidden from public view — the friendly title above is shown instead */}
           </div>
           <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         </button>
