@@ -95,7 +95,7 @@ export function LandingTable() {
         <img
           src={image}
           alt={tableHeader || "What's on"}
-          className="absolute inset-0 w-full h-full object-contain"
+          className="absolute inset-0 w-full h-full object-cover"
           onError={() => setFailedImage(image)}
           data-testid="landing-table-image"
         />
