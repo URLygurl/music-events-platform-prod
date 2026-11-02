@@ -1641,7 +1641,7 @@ export default function AdminPage() {
           ) : (
             <>
               <SettingsSection
-                settings={sectionSettings}
+                settings={sectionSettings.filter((s) => !["landing_table_mode", "landing_table_image"].includes(s.key))}
                 localValues={localValues}
                 setLocal={setLocal}
               />
@@ -1651,20 +1651,45 @@ export default function AdminPage() {
               {currentSection.id === "landing" && (() => {
                 const COLS = [1, 2, 3, 4] as const;
                 const ROWS = [1, 2, 3, 4, 5, 6] as const;
-                const visibleCols = COLS.filter((c) => (localValues[`landing_table_col${c}_show`] ?? "true") === "true");
+                const value = (key: string, fallback = "") => localValues[key] ?? allSettings?.find((s) => s.key === key)?.value ?? fallback;
+                const mode = value("landing_table_mode", "table");
                 return (
                   <div className="mt-6 space-y-3">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Info Table Cells</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">What's On — Table Manager</p>
+                    <Label htmlFor="landing-table-mode" className="text-xs font-medium">Display</Label>
+                    <Select value={mode} onValueChange={(v) => setLocal("landing_table_mode", v)}>
+                      <SelectTrigger id="landing-table-mode" data-testid="select-landing-table-mode">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="table">Use table</SelectItem>
+                        <SelectItem value="image">Use image</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {mode === "image" ? (
+                      <>
+                        <ImageUploadField
+                          label="What's On Image"
+                          value={value("landing_table_image")}
+                          onChange={(url) => setLocal("landing_table_image", url)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          The full image fits inside the same space as your table, without cropping.
+                          Your table is kept for switching back. Until an image is uploaded, the table is shown.
+                          Click Save Changes to publish.
+                        </p>
+                      </>
+                    ) : (
                     <div className="rounded-lg border border-black/10 overflow-hidden bg-white">
                       <table className="w-full text-xs border-collapse">
                         <thead>
                           <tr className="bg-muted/40">
                             {COLS.map((c) => {
-                              const colVisible = (localValues[`landing_table_col${c}_show`] ?? "true") === "true";
+                              const colVisible = value(`landing_table_col${c}_show`, "true") === "true";
                               return (
                                 <th key={c} className="px-2 py-1.5 text-left border-b border-black/10 font-medium">
                                   <div className="flex items-center gap-1">
-                                    <span className="flex-1 truncate">{localValues[`landing_table_col${c}_header`] ?? `Col ${c}`}</span>
+                                    <span className="flex-1 truncate">{value(`landing_table_col${c}_header`, `Col ${c}`)}</span>
                                     <button
                                       type="button"
                                       className="shrink-0 text-muted-foreground hover:text-foreground"
@@ -1683,12 +1708,12 @@ export default function AdminPage() {
                           {ROWS.map((r) => (
                             <tr key={r} className="border-b border-black/5 last:border-0">
                               {COLS.map((c) => {
-                                const colVisible = (localValues[`landing_table_col${c}_show`] ?? "true") === "true";
+                                const colVisible = value(`landing_table_col${c}_show`, "true") === "true";
                                 const cellKey = `landing_table_r${r}c${c}`;
                                 return (
                                   <td key={c} className={`px-1 py-1 align-top ${!colVisible ? "opacity-30" : ""}`}>
                                     <Input
-                                      value={localValues[cellKey] ?? ""}
+                                      value={value(cellKey)}
                                       onChange={(e) => setLocal(cellKey, e.target.value)}
                                       className="h-7 text-xs px-1.5 border-0 bg-transparent focus:bg-white focus:border focus:border-black/20 rounded"
                                       placeholder="—"
@@ -1702,6 +1727,7 @@ export default function AdminPage() {
                         </tbody>
                       </table>
                     </div>
+                    )}
                   </div>
                 );
               })()}

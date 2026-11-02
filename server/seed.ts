@@ -170,6 +170,8 @@ export async function seedDatabase() {
     { key: "bg_landing_table", value: "", type: "image", section: "wallpapers", label: "Landing Table Background" },
     { key: "landing_show_enquiry", value: "true", type: "toggle", section: "landing", label: "Show Enquiry Form" },
     { key: "landing_show_table", value: "true", type: "toggle", section: "landing", label: "Show Info Table" },
+    { key: "landing_table_mode", value: "table", type: "text", section: "landing", label: "What's On Display Mode" },
+    { key: "landing_table_image", value: "", type: "image", section: "landing", label: "What's On Image" },
     { key: "landing_table_header", value: "[ Table Header ]", type: "text", section: "landing", label: "Table Header Text" },
     { key: "landing_table_col1_show", value: "true", type: "toggle", section: "landing", label: "Show Column 1" },
     { key: "landing_table_col1_header", value: "Column 1", type: "text", section: "landing", label: "Column 1 Header" },
