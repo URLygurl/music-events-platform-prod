@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { EmailLogin } from "@/components/email-login";
 
 export default function LoginPage() {
   const { get } = useSettings();
@@ -21,6 +22,10 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
+
+  const { data: loginOptions } = useQuery<{ emailLoginEnabled: boolean }>({
+    queryKey: ["/api/login-options"], staleTime: 0,
+  });
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -112,6 +117,7 @@ export default function LoginPage() {
                 {loading ? "Signing in…" : "Sign In"}
               </Button>
             </form>
+            {loginOptions?.emailLoginEnabled && <EmailLogin />}
           </div>
         </div>
         <BottomNav />

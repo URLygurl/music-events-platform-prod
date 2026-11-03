@@ -1294,6 +1294,12 @@ export default function AdminPage() {
             Edit the fields below. Changes are saved per section.
           </p>
 
+          <Link href="/admin/authentication">
+            <Button variant="outline" size="sm" className="mb-4" data-testid="button-auth-dashboard">
+              <ShieldCheck className="w-4 h-4 mr-2" /> Authentication / Resend
+            </Button>
+          </Link>
+
           {currentSection.id === "artists" ? (
             <div className="space-y-4">
               <Card className="p-4 overflow-visible">

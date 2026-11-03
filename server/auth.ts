@@ -23,6 +23,7 @@ import type { Express, RequestHandler } from "express";
 import { db } from "./db";
 import { users, activityLog } from "@shared/models/auth";
 import { eq, sql } from "drizzle-orm";
+import { getBetterAuthUser, signOutBetterAuth } from "./better-auth";
 
 // ─── Session setup ────────────────────────────────────────────────────────────
 
@@ -150,10 +151,8 @@ export async function setupAuth(app: Express) {
 
   // GET /api/auth/user
   app.get("/api/auth/user", async (req, res) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    const [user] = await db.select().from(users).where(eq(users.id, req.session.userId));
+    res.set("Cache-Control", "no-store");
+    const user = await getSessionUser(req);
     if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -161,7 +160,8 @@ export async function setupAuth(app: Express) {
   });
 
   // GET /api/logout
-  app.get("/api/logout", (req, res) => {
+  app.get("/api/logout", async (req, res) => {
+    await signOutBetterAuth(req, res);
     req.session.destroy(() => {
       res.redirect("/");
     });
@@ -176,9 +176,14 @@ export async function setupAuth(app: Express) {
 // ─── Auth middleware ──────────────────────────────────────────────────────────
 
 export async function getSessionUser(req: any) {
-  if (!req.session?.userId) return null;
-  const [user] = await db.select().from(users).where(eq(users.id, req.session.userId));
-  return user || null;
+  if (req.session?.userId) {
+    const [user] = await db.select().from(users).where(eq(users.id, req.session.userId));
+    if (user) {
+      const { passwordHash: _passwordHash, ...safeUser } = user;
+      return safeUser;
+    }
+  }
+  return getBetterAuthUser(req);
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {

@@ -22,6 +22,7 @@ const DSPage               = lazy(() => import("@/pages/ds"));
 const ProfilePage          = lazy(() => import("@/pages/profile"));
 const AdminPage            = lazy(() => import("@/pages/admin"));
 const IntegrationsPage     = lazy(() => import("@/pages/integrations"));
+const AuthDashboard        = lazy(() => import("@/pages/auth-dashboard"));
 const DonatePage           = lazy(() => import("@/pages/donate"));
 const ShopPage             = lazy(() => import("@/pages/shop"));
 const ProductDetailPage    = lazy(() => import("@/pages/product-detail"));
@@ -48,6 +49,7 @@ function Router() {
         <Route path="/login" component={LoginPage} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/admin/integrations" component={IntegrationsPage} />
+        <Route path="/admin/authentication" component={AuthDashboard} />
         <Route path="/artists/:id" component={ArtistDetailPage} />
         <Route path="/artists" component={ArtistsDirectoryPage} />
         <Route path="/events/:id" component={EventDetailPage} />

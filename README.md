@@ -45,14 +45,14 @@ The codebase follows a compact monorepo layout. Shared schema definitions live a
 | `client/src` | React application, pages, components, hooks, UI library wrappers, and frontend utilities. |
 | `server` | Express entrypoint, routes, authentication, database setup, storage layer, integrations, and production static serving. |
 | `shared` | Drizzle schema, auth model definitions, insert schemas, and shared TypeScript types. |
-| `script/build.ts` | Production build script that compiles the Vite frontend and bundles the server into `dist/index.cjs`. |
+| `script/build.ts` | Production build script that compiles the Vite frontend and bundles the ESM server into `dist/index.js`. |
 | `drizzle.config.ts` | Drizzle Kit configuration using `shared/schema.ts` and `DATABASE_URL`. |
 | `nixpacks.toml` | Railway/Nixpacks install, build, and start configuration. |
-| `start.sh` | Production startup script that runs `drizzle-kit push` before starting `node dist/index.cjs`. |
+| `start.sh` | Production startup script that runs `drizzle-kit push` before starting `node dist/index.js`. |
 
 ## Local Development
 
-Use a recent Node.js runtime compatible with the project dependencies. The deployed build currently uses the standard Node/NPM workflow configured in Nixpacks.
+Use Node.js 22 or newer. The app uses standard Node/NPM and PostgreSQL, and can run on Railway or your own HTTPS-enabled server.
 
 ```bash
 npm install --legacy-peer-deps
@@ -120,9 +120,15 @@ The current production behavior supports two login paths. First, the configured 
 
 If a database-backed admin cannot log in, check the following in order: confirm the user exists in the same production database used by Railway, confirm the user has `role = 'admin'` or `role = 'superadmin'`, confirm `username` or `email` matches what the user is entering, confirm `password_hash` is populated with a bcrypt hash, and confirm Railway has deployed the latest commit containing database-backed login support.
 
+### Staged Better Auth + Resend
+
+Better Auth is integrated alongside existing login, disabled by default. A protected, read-only dashboard is available at **Admin → Authentication / Resend** (`/admin/authentication`), with an external link to Resend's hosted dashboard. No existing account/password migration or Better Auth role/permission changes are applied. Public magic-link and email-code login stays hidden until explicit server configuration and sender-domain verification.
+
+See [Better Auth setup and safe activation](docs/BETTER_AUTH_SETUP.md) for environment variables, the separate `app_auth` schema migration, local tests, and self-hosting instructions. The existing Drizzle schema push is filtered to `public` and does not manage Better Auth tables.
+
 ## Build and Deployment
 
-The production build compiles the frontend into `dist/public` and bundles the Express server into `dist/index.cjs`. Railway uses Nixpacks according to `nixpacks.toml`.
+The production build compiles the frontend into `dist/public` and bundles the ESM Express server into `dist/index.js`, keeping dependency packages external. Railway uses Nixpacks according to `nixpacks.toml`. On your own server, use the same build and run `NODE_ENV=production node dist/index.js` after reviewed database migrations.
 
 ```bash
 npm install --legacy-peer-deps

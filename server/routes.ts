@@ -4,6 +4,7 @@ import type { RequestHandler } from "express";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema, insertDsClientSchema, insertProductSchema } from "@shared/schema";
+import { getAuthDashboard } from "./better-auth";
 import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin, logActivity, getSessionUser } from "./auth";
 import { db } from "./db";
 import { activityLog } from "@shared/models/auth";
@@ -105,6 +106,15 @@ export async function registerRoutes(
 ): Promise<Server> {
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  app.get("/api/admin/auth-dashboard", isAdmin, async (_req, res) => {
+    res.set("Cache-Control", "no-store");
+    try {
+      res.json(await getAuthDashboard());
+    } catch {
+      res.status(503).json({ message: "Authentication dashboard temporarily unavailable" });
+    }
+  });
 
   app.get("/api/bootstrap-admin", isAuthenticated, async (req: any, res) => {
     try {
