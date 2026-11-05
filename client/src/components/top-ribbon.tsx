@@ -1,5 +1,5 @@
 import { Menu, LogIn, Terminal } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -27,6 +27,29 @@ export function TopRibbon() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { get } = useSettings();
   const [open, setOpen] = useState(false);
+  const [compact, setCompact] = useState(false);
+  const [titleHeight, setTitleHeight] = useState(35);
+  const titleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let frame = 0;
+    const update = () => { frame = 0; setCompact(window.scrollY > 48); };
+    const scroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    update();
+    window.addEventListener("scroll", scroll, { passive: true });
+    return () => { window.removeEventListener("scroll", scroll); if (frame) cancelAnimationFrame(frame); };
+  }, []);
+
+  useEffect(() => {
+    const title = titleRef.current;
+    if (!title) return;
+    const measure = () => setTitleHeight(Math.ceil(title.getBoundingClientRect().height));
+    measure();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    observer?.observe(title);
+    window.addEventListener("resize", measure);
+    return () => { observer?.disconnect(); window.removeEventListener("resize", measure); };
+  }, []);
 
   const companyName = get("global_company_name", "[ Company Name ]");
   const logoImage = get("global_logo_image");
@@ -34,7 +57,9 @@ export function TopRibbon() {
   const companyNameFontSize = get("global_company_name_font_size", "12");
   const companyNameColor = get("global_company_name_color", "");
   const companyNameFont = get("global_company_name_font", "");
-  const logoHeight = parseInt(get("global_logo_height", "192") || "192", 10);
+  const configuredHeight = parseInt(get("global_logo_height", "192") || "192", 10);
+  const logoHeight = logoImage ? Math.max(56, Number.isFinite(configuredHeight) ? configuredHeight : 192) : 128;
+  const bannerHeight = compact ? `min(${logoHeight}px, clamp(56px, 8vw, 80px))` : `${logoHeight}px`;
 
   // Check Hermes visibility for admin users
   // Superadmin always sees it; admin only sees it when hermes_admin_visible is true
@@ -61,8 +86,9 @@ export function TopRibbon() {
     : [];
 
   return (
-    <header className="sticky top-0 z-50 w-full shadow-md">
-      <div className="w-full border-b bg-background/90 backdrop-blur-md px-4 py-2">
+    <div style={{ height: logoHeight + titleHeight + 1 }} data-testid="header-spacer">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full shadow-md" data-testid="header-banner" data-compact={compact}>
+      <div ref={titleRef} className="w-full border-b bg-background/90 backdrop-blur-md px-4 py-2">
         <p
           className="text-center tracking-widest uppercase text-muted-foreground"
           style={{
@@ -77,12 +103,12 @@ export function TopRibbon() {
       </div>
 
       <div className="w-full border-b bg-background/90 backdrop-blur-md">
-        <div className="relative w-full">
+        <div className="relative w-full motion-safe:transition-[height] motion-safe:duration-200 motion-safe:ease-out" style={{ height: bannerHeight }}>
           {logoImage ? (
-            <img src={logoImage} alt="Logo" className="w-full object-cover" style={{ objectPosition: logoObjectPosition, height: `${logoHeight}px` }} data-testid="img-logo" />
+            <img src={logoImage} alt="Logo" className={`w-full h-full ${compact ? "object-contain" : "object-cover"}`} style={{ objectPosition: compact ? "center" : logoObjectPosition }} data-testid="img-logo" />
           ) : (
             <div
-              className="w-full h-32 border-b border-dashed border-muted-foreground/40 flex items-center justify-center"
+              className="w-full h-full border-b border-dashed border-muted-foreground/40 flex items-center justify-center"
               data-testid="placeholder-logo"
             >
               <span className="text-xs text-muted-foreground">[ Logo / Image ]</span>
@@ -159,5 +185,6 @@ export function TopRibbon() {
         </div>
       </div>
     </header>
+    </div>
   );
 }
