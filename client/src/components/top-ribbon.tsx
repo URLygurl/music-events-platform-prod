@@ -56,8 +56,8 @@ export function TopRibbon() {
   );
 
   const visiblePublicItems = PUBLIC_MENU_ITEMS.filter((item) => get(item.settingKey, "true") === "true");
-  const visibleAdminItems = isAdmin
-    ? ADMIN_MENU_ITEMS.filter((item) => get(item.settingKey, "true") === "true")
+  const visibleAdminItems = isAuthenticated
+    ? ADMIN_MENU_ITEMS.filter((item) => (item.key === "profile" || isAdmin) && get(item.settingKey, "true") === "true")
     : [];
 
   return (
