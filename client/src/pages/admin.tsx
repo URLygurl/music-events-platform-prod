@@ -1680,7 +1680,7 @@ export default function AdminPage() {
                           onChange={(url) => setLocal("landing_table_image", url)}
                         />
                         <p className="text-xs text-muted-foreground">
-                          The image fills the same space as your table, edge to edge. Edges may be cropped to fit.
+                          On mobile, the whole image scales to fit without cropping. On larger screens, it fills the table box and edges may be cropped.
                           Your table is kept for switching back. Until an image is uploaded, the table is shown.
                           Click Save Changes to publish.
                         </p>

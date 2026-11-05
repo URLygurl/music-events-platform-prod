@@ -37,6 +37,7 @@ export function LandingTable() {
     >
       {/* Keep the original layout as a sizing template, not a second visible table. */}
       <div
+        className={showImage ? "hidden sm:block" : undefined}
         style={showImage ? { visibility: "hidden" } : undefined}
         aria-hidden={showImage || undefined}
         data-testid="landing-table-content"
@@ -49,7 +50,7 @@ export function LandingTable() {
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-xs border-collapse">
+        <table className="w-full table-fixed text-xs border-collapse">
           {/* Column headers */}
           <thead>
             <tr>
@@ -58,7 +59,7 @@ export function LandingTable() {
                 return (
                   <th
                     key={c}
-                    className="px-2 py-1.5 text-left font-semibold border-b border-black/10 bg-white/60 text-[11px] tracking-wide"
+                    className="px-2 py-1.5 text-left font-semibold border-b border-black/10 bg-white/60 text-[11px] tracking-wide [overflow-wrap:anywhere]"
                     style={{ width: `${100 / visibleCols.length}%` }}
                   >
                     {header}
@@ -77,7 +78,7 @@ export function LandingTable() {
                   return (
                     <td
                       key={c}
-                      className="px-2 py-1.5 align-top bg-white/40 text-[11px] leading-snug"
+                      className="px-2 py-1.5 align-top bg-white/40 text-[11px] leading-snug [overflow-wrap:anywhere]"
                     >
                       {cellVal || (
                         <span className="text-black/20 italic">—</span>
@@ -95,7 +96,7 @@ export function LandingTable() {
         <img
           src={image}
           alt={tableHeader || "What's on"}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="block w-full h-auto sm:absolute sm:inset-0 sm:h-full sm:object-cover"
           onError={() => setFailedImage(image)}
           data-testid="landing-table-image"
         />
