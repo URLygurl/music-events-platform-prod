@@ -6,6 +6,7 @@ import { storage } from "./storage";
 import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema, insertDsClientSchema, insertProductSchema } from "@shared/schema";
 import { getAuthDashboard } from "./better-auth";
 import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin, logActivity, getSessionUser } from "./auth";
+import { initializeProfileStorage, registerProfileRoutes } from "./profile";
 import { db } from "./db";
 import { activityLog } from "@shared/models/auth";
 import { desc } from "drizzle-orm";
@@ -106,6 +107,8 @@ export async function registerRoutes(
 ): Promise<Server> {
   await setupAuth(app);
   registerAuthRoutes(app);
+  await initializeProfileStorage();
+  registerProfileRoutes(app);
 
   app.get("/api/admin/auth-dashboard", isAdmin, async (_req, res) => {
     res.set("Cache-Control", "no-store");
@@ -948,6 +951,7 @@ export async function registerRoutes(
 
       await storage.createOrder({
         stripeSessionId: session.id,
+        ownerUserId: (await getSessionUser(req))?.id || null,
         customerEmail: customerEmail || null,
         customerName: customerName || metadata?.customerName || null,
         amountTotal: session.amount_total,
@@ -992,6 +996,7 @@ export async function registerRoutes(
 
       await storage.createOrder({
         stripeSessionId: session.id,
+        ownerUserId: (await getSessionUser(req))?.id || null,
         customerEmail: email || null,
         customerName: name || null,
         amountTotal: Math.round(amount),
@@ -1133,6 +1138,7 @@ export async function registerRoutes(
       const approveLink = ppOrder.links?.find((l: any) => l.rel === "approve")?.href;
       await storage.createOrder({
         stripeSessionId: `paypal_${ppOrder.id}`,
+        ownerUserId: (await getSessionUser(req))?.id || null,
         customerEmail: customerEmail || null,
         customerName: customerName || metadata?.customerName || null,
         amountTotal: totalAmount,

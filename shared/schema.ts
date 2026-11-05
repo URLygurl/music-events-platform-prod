@@ -1,9 +1,10 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export * from "./models/auth";
+export * from "./profile-schema";
 
 export const artists = pgTable("artists", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -143,10 +144,13 @@ export const orders = pgTable("orders", {
   amountTotal: integer("amount_total"), // in cents
   currency: text("currency").default("nzd"),
   status: text("status").default("pending"), // pending, paid, failed, refunded
+  ownerUserId: varchar("owner_user_id"), // From authenticated session only; never inferred from email.
   items: text("items"), // JSON array of {productId, name, qty, price}
   metadata: text("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("orders_owner_user_id_idx").on(table.ownerUserId).where(sql`${table.ownerUserId} IS NOT NULL`),
+]);
 
 export const uploadedFiles = pgTable("uploaded_files", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

@@ -13,6 +13,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { getVisibleFields } from "@shared/schema";
 import type { Product } from "@shared/schema";
 import { useCart } from "@/hooks/use-cart";
+import { useAuth } from "@/hooks/use-auth";
+import { useProfile, localWishlist } from "@/hooks/use-profile";
 import { openCartDrawer } from "@/components/cart-drawer";
 import {
   ShoppingCart,
@@ -29,11 +31,7 @@ import {
 const WISHLIST_KEY = "mvt_wishlist";
 
 function getWishlist(): number[] {
-  try {
-    return JSON.parse(localStorage.getItem(WISHLIST_KEY) || "[]");
-  } catch {
-    return [];
-  }
+  return localWishlist();
 }
 
 function toggleWishlist(id: number): boolean {
@@ -74,6 +72,8 @@ export default function ProductDetailPage() {
   const [, params] = useRoute("/shop/:id");
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { user, isLoading: loadingUser } = useAuth();
+  const profile = useProfile();
 
   const productId = params?.id ? parseInt(params.id) : null;
 
@@ -93,9 +93,9 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (productId) {
-      setWishlisted(getWishlist().includes(productId));
+      setWishlisted(user ? !!profile.data?.favourites.some((item) => item.id === productId) : getWishlist().includes(productId));
     }
-  }, [productId]);
+  }, [productId, user?.id, profile.data?.favourites]);
 
   const { data: stripeConfig } = useQuery<{ publishableKey: string | null }>({
     queryKey: ["/api/stripe/config"],
@@ -206,10 +206,19 @@ export default function ProductDetailPage() {
     toast({ title: "Added to cart", description: product.name });
   };
 
-  const handleWishlist = () => {
-    const added = toggleWishlist(product.id);
-    setWishlisted(added);
-    toast({ title: added ? "Added to wishlist" : "Removed from wishlist" });
+  const handleWishlist = async () => {
+    try {
+      if (user) {
+        await profile.favourite.mutateAsync({ id: product.id, remove: wishlisted });
+        toast({ title: wishlisted ? "Removed from wishlist" : "Saved to your account" });
+      } else {
+        const added = toggleWishlist(product.id);
+        setWishlisted(added);
+        toast({ title: added ? "Added to browser wishlist" : "Removed from wishlist" });
+      }
+    } catch (error) {
+      toast({ title: "Could not save favourite", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
   };
 
   return (
@@ -256,6 +265,7 @@ export default function ProductDetailPage() {
           </div>
           <button
             onClick={handleWishlist}
+            disabled={loadingUser || (!!user && (profile.isLoading || profile.isError || profile.favourite.isPending))}
             className="flex-shrink-0 w-10 h-10 rounded-full border flex items-center justify-center transition-colors hover:bg-muted"
             data-testid="button-wishlist"
             aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
