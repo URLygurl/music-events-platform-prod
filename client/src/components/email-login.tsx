@@ -10,9 +10,19 @@ const authClient = createAuthClient({
   plugins: [magicLinkClient(), emailOTPClient()],
 });
 
-export function EmailLogin() {
+// The farm bearer credential is held by Nakedapp's backend. The browser only
+// receives the existing HttpOnly app-session cookie, never set-auth-token.
+const farmClient = createAuthClient({
+  basePath: "/api/farm-auth",
+  plugins: [magicLinkClient(), emailOTPClient()],
+});
+
+export function EmailLogin({ provider = "local", magicLinkEnabled = true }: {
+  provider?: "local" | "farm"; magicLinkEnabled?: boolean;
+}) {
+  const client = provider === "farm" ? farmClient : authClient;
   const [email, setEmail] = useState("");
-  const [method, setMethod] = useState<"link" | "code">("link");
+  const [method, setMethod] = useState<"link" | "code">(magicLinkEnabled ? "link" : "code");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -23,13 +33,13 @@ export function EmailLogin() {
     setBusy(true); setError(""); setMessage("");
     try {
       if (method === "code" && sent) {
-        const result = await authClient.signIn.emailOtp({ email, otp: code });
+        const result = await client.signIn.emailOtp({ email, otp: code });
         if (result.error) { setError("Code invalid or expired. Request a new code."); return; }
-        window.location.assign("/");
+        window.location.assign(provider === "farm" ? "/profile" : "/");
       } else {
         const result = method === "link"
-          ? await authClient.signIn.magicLink({ email, callbackURL: "/", errorCallbackURL: "/login" })
-          : await authClient.emailOtp.sendVerificationOtp({ email, type: "sign-in" });
+          ? await client.signIn.magicLink(provider === "farm" ? { email } : { email, callbackURL: "/", errorCallbackURL: "/login" })
+          : await client.emailOtp.sendVerificationOtp({ email, type: "sign-in" });
         if (result.error) { setError("Unable to send. Please wait a minute and try again."); return; }
         setSent(true);
         setMessage(method === "link" ? "Check your email for a sign-in link. It expires in 5 minutes." : "Check your email for a 6-digit code. It expires in 5 minutes.");
@@ -44,7 +54,7 @@ export function EmailLogin() {
     <div className="border-t pt-5 space-y-3" data-testid="email-login">
       <h2 className="text-sm font-semibold">Sign in with email</h2>
       <div className="flex gap-2">
-        <Button type="button" size="sm" variant={method === "link" ? "default" : "outline"} onClick={() => reset("link")} disabled={busy}>Magic link</Button>
+        {magicLinkEnabled && <Button type="button" size="sm" variant={method === "link" ? "default" : "outline"} onClick={() => reset("link")} disabled={busy}>Magic link</Button>}
         <Button type="button" size="sm" variant={method === "code" ? "default" : "outline"} onClick={() => reset("code")} disabled={busy}>One-time code</Button>
       </div>
       <form onSubmit={submit} className="space-y-3">

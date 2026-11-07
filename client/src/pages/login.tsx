@@ -19,11 +19,14 @@ export default function LoginPage() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => new URLSearchParams(window.location.search).get("error") === "farm_auth"
+    ? "The sign-in link is invalid or expired. Please request a new link." : "");
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: loginOptions } = useQuery<{ emailLoginEnabled: boolean }>({
+  const { data: loginOptions } = useQuery<{
+    emailLoginEnabled: boolean; farmEmailLoginEnabled?: boolean; farmMagicLinkEnabled?: boolean;
+  }>({
     queryKey: ["/api/login-options"], staleTime: 0,
   });
 
@@ -117,7 +120,9 @@ export default function LoginPage() {
                 {loading ? "Signing in…" : "Sign In"}
               </Button>
             </form>
-            {loginOptions?.emailLoginEnabled && <EmailLogin />}
+            {loginOptions?.farmEmailLoginEnabled
+              ? <EmailLogin key={`farm-${!!loginOptions.farmMagicLinkEnabled}`} provider="farm" magicLinkEnabled={!!loginOptions.farmMagicLinkEnabled} />
+              : loginOptions?.emailLoginEnabled && <EmailLogin />}
           </div>
         </div>
         <BottomNav />

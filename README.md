@@ -122,9 +122,11 @@ If a database-backed admin cannot log in, check the following in order: confirm 
 
 ### Staged Better Auth + Resend
 
-Better Auth is integrated alongside existing login, disabled by default. A protected, read-only dashboard is available at **Admin → Authentication / Resend** (`/admin/authentication`), with an external link to Resend's hosted dashboard. No existing account/password migration or Better Auth role/permission changes are applied. Public magic-link and email-code login stays hidden until explicit server configuration and sender-domain verification.
+The current integration uses a **dedicated farm Better Auth service**, alongside the unchanged existing login. A disabled-by-default `/api/farm-auth` bridge validates farm sessions and holds bearer credentials encrypted server-side; the browser uses an HttpOnly Nakedapp session cookie, not localStorage tokens. Authentication accounts stay in the farm database while app profiles/content remain in Neon. No existing accounts/passwords are migrated or linked by matching email, and farm sign-in does not grant admin access.
 
-See [Better Auth setup and safe activation](docs/BETTER_AUTH_SETUP.md) for environment variables, the separate `app_auth` schema migration, local tests, and self-hosting instructions. The existing Drizzle schema push is filtered to `public` and does not manage Better Auth tables.
+**Admin → Authentication / Resend** (`/admin/authentication`) provides protected, read-only connector status and links to the hosted Better Auth and Resend dashboards. Public email login stays hidden until explicit configuration and verified sending; magic links have a separate gate until farm emails route verification through Nakedapp.
+
+See [Farm auth connection and safe activation](docs/FARM_AUTH_SETUP.md) for server settings, Ferris's magic-link email handoff, tests and rollback. The earlier [optional in-app setup](docs/BETTER_AUTH_SETUP.md) remains documented; keep it disabled when using the farm. The existing Drizzle schema push is filtered to `public` and does not manage farm auth tables.
 
 ## Build and Deployment
 

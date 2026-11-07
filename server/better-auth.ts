@@ -2,6 +2,7 @@ import type { Express, Request } from "express";
 import { Pool } from "pg";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import { createBetterAuth, readAuthConfig } from "./better-auth-config";
+import { getFarmAuthStatus } from "./farm-auth";
 
 const config = readAuthConfig();
 let instance: ReturnType<typeof createBetterAuth> | null = null;
@@ -52,7 +53,12 @@ export function getAuthStatus() {
 // password/role-management and all unused plugin endpoints stay inaccessible.
 export function mountBetterAuth(app: Express) {
   app.get("/api/login-options", (_req, res) => {
-    res.set("Cache-Control", "no-store").json({ emailLoginEnabled: getAuthStatus().emailLoginEnabled });
+    const farm = getFarmAuthStatus();
+    res.set("Cache-Control", "no-store").json({
+      emailLoginEnabled: !farm.enabled && getAuthStatus().emailLoginEnabled,
+      farmEmailLoginEnabled: farm.emailLoginEnabled,
+      farmMagicLinkEnabled: farm.magicLinkEnabled,
+    });
   });
   app.all("/api/better-auth/{*path}", async (req, res, next) => {
     res.set("Cache-Control", "no-store");
@@ -97,14 +103,15 @@ export async function getBetterAuthUser(req: Request) {
 
 export async function getAuthDashboard() {
   const status = getAuthStatus();
-  if (!authPool || !instance) return { status, counts: { users: 0, activeSessions: 0 }, users: [], sessions: [] };
+  const farm = getFarmAuthStatus();
+  if (!authPool || !instance) return { status, farm, counts: { users: 0, activeSessions: 0 }, users: [], sessions: [] };
   const [counts, users, sessions] = await Promise.all([
     authPool.query(`SELECT (SELECT count(*)::int FROM app_auth."user") AS users,
       (SELECT count(*)::int FROM app_auth."session" WHERE "expiresAt" > now()) AS "activeSessions"`),
     authPool.query(`SELECT id, name, email, "emailVerified", "createdAt" FROM app_auth."user" ORDER BY "createdAt" DESC LIMIT 50`),
     authPool.query(`SELECT id, "userId", "createdAt", "expiresAt" FROM app_auth."session" WHERE "expiresAt" > now() ORDER BY "createdAt" DESC LIMIT 50`),
   ]);
-  return { status, counts: counts.rows[0], users: users.rows, sessions: sessions.rows };
+  return { status, farm, counts: counts.rows[0], users: users.rows, sessions: sessions.rows };
 }
 
 export async function signOutBetterAuth(req: Request, res: import("express").Response) {

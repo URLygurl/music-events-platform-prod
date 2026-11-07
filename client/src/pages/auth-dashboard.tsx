@@ -13,6 +13,7 @@ type Dashboard = {
     emailLoginEnabled: boolean; resendConfigured: boolean;
     senderConfigured: boolean; domainVerified: boolean; reason: string;
   };
+  farm?: { enabled: boolean; configured: boolean; emailLoginEnabled: boolean; magicLinkEnabled: boolean; reason: string };
   counts: { users: number; activeSessions: number };
   users: { id: string; name: string; email: string; emailVerified: boolean; createdAt: string }[];
   sessions: { id: string; userId: string; createdAt: string; expiresAt: string }[];
@@ -47,13 +48,27 @@ export default function AuthDashboard() {
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={loading}><RefreshCw className="w-4 h-4 mr-1" />Refresh</Button>
         </div>
         <h1 className="text-xl font-semibold flex items-center gap-2"><ShieldCheck className="w-5 h-5" />Authentication</h1>
-        <p className="text-sm text-muted-foreground">Self-hosted Better Auth dashboard. Existing admin login remains active. Roles and permissions will be added later.</p>
+        <p className="text-sm text-muted-foreground">Read-only authentication status. Existing admin login remains active. Manage farm accounts in Better Auth's hosted dashboard.</p>
         {loading ? <Skeleton className="h-40" /> : isError ? (
           <Card className="p-4">Could not load auth status. Please refresh.</Card>
         ) : data && (
           <>
+            {data.farm && <Card className="p-4 space-y-3" data-testid="farm-auth-status">
+              <h2 className="font-semibold text-sm">Dedicated farm connector</h2>
+              <p className="text-sm">{data.farm.reason}</p>
+              {[
+                ["Connector configuration", data.farm.configured],
+                ["Connector enabled", data.farm.enabled],
+                ["Email-code login enabled", data.farm.emailLoginEnabled],
+                ["Magic-link login enabled", data.farm.magicLinkEnabled],
+              ].map(([label, ready]) => <div className="flex justify-between gap-3 text-xs" key={String(label)}>
+                <span>{label}</span><span className={ready ? "text-green-700" : "text-muted-foreground"}>{ready ? "Ready" : "Not enabled"}</span>
+              </div>)}
+              <p className="text-xs text-muted-foreground">These flags describe Nakedapp configuration, not live farm health or email delivery. Farm users stay in the farm database. Bearer tokens stay encrypted server-side.</p>
+              <a href="https://dash.better-auth.com" target="_blank" rel="noopener noreferrer"><Button variant="outline" size="sm">Open Better Auth dashboard<ExternalLink className="w-4 h-4 ml-2" /></Button></a>
+            </Card>}
             <Card className="p-4 space-y-3">
-              <h2 className="font-semibold text-sm">Integration status</h2>
+              <h2 className="font-semibold text-sm">Optional in-app Better Auth status</h2>
               <p className="text-sm" data-testid="auth-status">{data.status.reason}</p>
               {flags.map(([label, ready]) => (
                 <div className="flex justify-between gap-3 text-xs" key={label}>
@@ -63,12 +78,12 @@ export default function AuthDashboard() {
               <p className="text-xs text-muted-foreground">Configuration is server-side only. No secrets are displayed or stored in public site settings.</p>
             </Card>
             <div className="grid grid-cols-2 gap-3">
-              <Card className="p-4"><p className="text-xs text-muted-foreground">Better Auth users</p><p className="text-2xl font-semibold">{data.counts.users}</p></Card>
-              <Card className="p-4"><p className="text-xs text-muted-foreground">Active sessions</p><p className="text-2xl font-semibold">{data.counts.activeSessions}</p></Card>
+              <Card className="p-4"><p className="text-xs text-muted-foreground">In-app Better Auth users</p><p className="text-2xl font-semibold">{data.counts.users}</p></Card>
+              <Card className="p-4"><p className="text-xs text-muted-foreground">In-app active sessions</p><p className="text-2xl font-semibold">{data.counts.activeSessions}</p></Card>
             </div>
             <Card className="p-4 space-y-3">
               <h2 className="font-semibold text-sm">Recent users</h2>
-              <p className="text-xs text-muted-foreground">Latest 50 Better Auth accounts only. Existing admin accounts are not migrated.</p>
+              <p className="text-xs text-muted-foreground">Latest 50 in-app Better Auth accounts only, not farm users. Existing admin accounts are not migrated.</p>
               {data.users.length ? data.users.map((u) => (
                 <div className="border-t pt-2 text-xs break-words" key={u.id}>
                   <p className="font-medium">{u.name || u.email}</p><p>{u.email}</p>

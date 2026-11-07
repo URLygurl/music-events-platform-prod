@@ -24,6 +24,7 @@ import { db } from "./db";
 import { users, activityLog } from "@shared/models/auth";
 import { eq, sql } from "drizzle-orm";
 import { getBetterAuthUser, signOutBetterAuth } from "./better-auth";
+import { getFarmAuthUser, mountFarmAuth, signOutFarmAuth } from "./farm-auth";
 
 // ─── Session setup ────────────────────────────────────────────────────────────
 
@@ -64,6 +65,7 @@ declare module "express-session" {
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
+  mountFarmAuth(app);
 
   // POST /api/login
   app.post("/api/login", async (req, res) => {
@@ -139,6 +141,8 @@ export async function setupAuth(app: Express) {
       userId = existingUser.id;
     }
 
+    // A successful legacy login remains authoritative; never mix auth identities.
+    if (req.session.farmAuth) await signOutFarmAuth(req);
     req.session.userId = userId;
     req.session.save((err) => {
       if (err) {
@@ -161,6 +165,7 @@ export async function setupAuth(app: Express) {
 
   // GET /api/logout
   app.get("/api/logout", async (req, res) => {
+    await signOutFarmAuth(req);
     await signOutBetterAuth(req, res);
     req.session.destroy(() => {
       res.redirect("/");
@@ -183,6 +188,7 @@ export async function getSessionUser(req: any) {
       return safeUser;
     }
   }
+  if (req.session?.farmAuth) return getFarmAuthUser(req);
   return getBetterAuthUser(req);
 }
 

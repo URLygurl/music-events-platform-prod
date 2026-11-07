@@ -1,6 +1,8 @@
 # Better Auth + Resend: staged integration
 
-Better Auth runs inside the existing Express app; Resend provides hosted email delivery. No separate auth service, dashboard server, Docker, or Railway-only dependency is required. Use Node.js 22+, PostgreSQL, the existing build/start commands, and an HTTPS app origin on any host.
+**Current direction: dedicated farm Better Auth.** See [Farm connection and activation](FARM_AUTH_SETUP.md). The farm owns authentication and sending credentials; Nakedapp retains its existing login and Neon profile/content storage. Leave the in-app Better Auth instance disabled when using the farm.
+
+The remaining sections document the earlier, optional in-app implementation. That implementation runs inside Express and uses Resend for hosted email delivery. Use Node.js 22+, PostgreSQL, the existing build/start commands, and an HTTPS app origin on any host.
 
 ## What is available now
 
