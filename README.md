@@ -122,11 +122,13 @@ If a database-backed admin cannot log in, check the following in order: confirm 
 
 ### Staged Better Auth + Resend
 
-The current integration uses a **dedicated farm Better Auth service**, alongside the unchanged existing login. A disabled-by-default `/api/farm-auth` bridge validates farm sessions and holds bearer credentials encrypted server-side; the browser uses an HttpOnly Nakedapp session cookie, not localStorage tokens. Authentication accounts stay in the farm database while app profiles/content remain in Neon. No existing accounts/passwords are migrated or linked by matching email, and farm sign-in does not grant admin access.
+The recommended integration uses **standard OAuth / OpenID Connect with the dedicated farm Better Auth service**, alongside the unchanged existing admin login. A disabled-by-default `/api/auth/oidc/start` route redirects to the farm's login page; `/api/auth/oidc/callback` completes a public-client authorization-code flow with PKCE, state, nonce and public-key validation. Nakedapp stores only a minimal verified identity in its own short app session—not farm session, access, ID or refresh tokens. No browser localStorage tokens or shared farm client secret are required.
 
-**Admin → Authentication / Resend** (`/admin/authentication`) provides protected, read-only connector status and links to the hosted Better Auth and Resend dashboards. Public email login stays hidden until explicit configuration and verified sending; magic links have a separate gate until farm emails route verification through Nakedapp.
+Authentication accounts, email codes and the Resend API key stay on the farm; app profiles/content remain in Neon. No existing accounts/passwords are migrated or linked by matching email, and farm sign-in does not grant admin access. The host still necessarily handles its own app sessions and Neon access credentials. Selecting `OIDC_ENABLED=true` disables the old bearer relay and optional in-app passwordless API, including when OIDC configuration is invalid.
 
-See [Farm auth connection and safe activation](docs/FARM_AUTH_SETUP.md) for server settings, Ferris's magic-link email handoff, tests and rollback. The earlier [optional in-app setup](docs/BETTER_AUTH_SETUP.md) remains documented; keep it disabled when using the farm. The existing Drizzle schema push is filtered to `public` and does not manage farm auth tables.
+**Admin → Authentication / Resend** (`/admin/authentication`) provides protected, read-only configuration status and links to the hosted Better Auth and Resend dashboards. The hosted dashboard manages farm auth; it is not a login intermediary. Public OIDC stays off until Ferris has deployed the farm provider/login, registered the exact callback and verified Resend sending.
+
+See [Standard farm OIDC setup and activation](docs/OIDC_SETUP.md). The [old bearer relay](docs/FARM_AUTH_SETUP.md) and [optional in-app setup](docs/BETTER_AUTH_SETUP.md) remain documented for rollback; keep both disabled with OIDC. The existing Drizzle schema push is filtered to `public` and does not manage farm auth tables.
 
 ## Build and Deployment
 

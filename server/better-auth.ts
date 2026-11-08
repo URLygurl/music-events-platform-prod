@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import { createBetterAuth, readAuthConfig } from "./better-auth-config";
 import { getFarmAuthStatus } from "./farm-auth";
+import { getOidcAuthStatus } from "./oidc-auth";
 
 const config = readAuthConfig();
 let instance: ReturnType<typeof createBetterAuth> | null = null;
@@ -10,6 +11,10 @@ let authPool: Pool | null = null;
 let reason = config.requested ? "Configuration required" : "Disabled until configuration is ready";
 
 export async function initializeBetterAuth() {
+  if (process.env.OIDC_ENABLED === "true") {
+    reason = "In-app authentication disabled; the farm handles OIDC login";
+    return;
+  }
   if (!config.requested) return;
   if (!config.configured) return;
   const candidatePool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5, connectionTimeoutMillis: 5000 });
@@ -54,14 +59,18 @@ export function getAuthStatus() {
 export function mountBetterAuth(app: Express) {
   app.get("/api/login-options", (_req, res) => {
     const farm = getFarmAuthStatus();
+    const oidc = getOidcAuthStatus();
+    const oidcSelected = process.env.OIDC_ENABLED === "true";
     res.set("Cache-Control", "no-store").json({
-      emailLoginEnabled: !farm.enabled && getAuthStatus().emailLoginEnabled,
-      farmEmailLoginEnabled: farm.emailLoginEnabled,
-      farmMagicLinkEnabled: farm.magicLinkEnabled,
+      emailLoginEnabled: !oidcSelected && !farm.enabled && getAuthStatus().emailLoginEnabled,
+      farmEmailLoginEnabled: !oidcSelected && farm.emailLoginEnabled,
+      farmMagicLinkEnabled: !oidcSelected && farm.magicLinkEnabled,
+      oidcLoginEnabled: oidc.enabled,
     });
   });
   app.all("/api/better-auth/{*path}", async (req, res, next) => {
     res.set("Cache-Control", "no-store");
+    if (process.env.OIDC_ENABLED === "true") return res.status(503).json({ message: "Use the secure farm login page." });
     if (!instance) return res.status(503).json({ message: "Email sign-in is not enabled yet." });
     const relative = req.path.slice("/api/better-auth".length);
     const route = `${req.method} ${relative}`;
@@ -103,15 +112,18 @@ export async function getBetterAuthUser(req: Request) {
 
 export async function getAuthDashboard() {
   const status = getAuthStatus();
-  const farm = getFarmAuthStatus();
-  if (!authPool || !instance) return { status, farm, counts: { users: 0, activeSessions: 0 }, users: [], sessions: [] };
+  const farm = process.env.OIDC_ENABLED === "true"
+    ? { ...getFarmAuthStatus(), enabled: false, emailLoginEnabled: false, magicLinkEnabled: false, reason: "Legacy relay disabled by OIDC selection" }
+    : getFarmAuthStatus();
+  const oidc = getOidcAuthStatus();
+  if (!authPool || !instance) return { status, farm, oidc, counts: { users: 0, activeSessions: 0 }, users: [], sessions: [] };
   const [counts, users, sessions] = await Promise.all([
     authPool.query(`SELECT (SELECT count(*)::int FROM app_auth."user") AS users,
       (SELECT count(*)::int FROM app_auth."session" WHERE "expiresAt" > now()) AS "activeSessions"`),
     authPool.query(`SELECT id, name, email, "emailVerified", "createdAt" FROM app_auth."user" ORDER BY "createdAt" DESC LIMIT 50`),
     authPool.query(`SELECT id, "userId", "createdAt", "expiresAt" FROM app_auth."session" WHERE "expiresAt" > now() ORDER BY "createdAt" DESC LIMIT 50`),
   ]);
-  return { status, farm, counts: counts.rows[0], users: users.rows, sessions: sessions.rows };
+  return { status, farm, oidc, counts: counts.rows[0], users: users.rows, sessions: sessions.rows };
 }
 
 export async function signOutBetterAuth(req: Request, res: import("express").Response) {

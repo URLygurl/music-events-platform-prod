@@ -1,5 +1,7 @@
 # Nakedapp → dedicated farm Better Auth
 
+> Legacy bearer-relay reference only. Use [standard farm OAuth / OpenID Connect](OIDC_SETUP.md) for the new setup. Selecting OIDC disables this relay; do not activate the old email gates as part of OIDC.
+
 The farm runs Better Auth, its own PostgreSQL `app_auth` schema, Resend delivery and the `dash()` infrastructure plugin. Nakedapp keeps its content/profile data in Neon and its existing username/password login. No users or passwords are migrated or linked by matching email.
 
 ## Connection design

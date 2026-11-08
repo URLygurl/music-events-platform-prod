@@ -19,13 +19,17 @@ export default function LoginPage() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(() => new URLSearchParams(window.location.search).get("error") === "farm_auth"
-    ? "The sign-in link is invalid or expired. Please request a new link." : "");
+  const [error, setError] = useState(() => {
+    const failure = new URLSearchParams(window.location.search).get("error");
+    if (failure === "oidc_auth") return "Secure sign-in could not be completed. Please try again.";
+    return failure === "farm_auth" ? "The sign-in link is invalid or expired. Please request a new link." : "";
+  });
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: loginOptions } = useQuery<{
     emailLoginEnabled: boolean; farmEmailLoginEnabled?: boolean; farmMagicLinkEnabled?: boolean;
+    oidcLoginEnabled?: boolean;
   }>({
     queryKey: ["/api/login-options"], staleTime: 0,
   });
@@ -84,6 +88,13 @@ export default function LoginPage() {
               <h1 className="text-2xl font-semibold tracking-tight">{welcomeText}</h1>
               <p className="text-sm text-muted-foreground">{subtitle}</p>
             </div>
+            {loginOptions?.oidcLoginEnabled && <div className="space-y-3" data-testid="oidc-login">
+              <Button asChild className="w-full">
+                <a href="/api/auth/oidc/start"><LogIn className="w-4 h-4 mr-2" />Sign in / Create account</a>
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">Continue to our secure login page for email links and one-time codes.</p>
+              <p className="text-xs text-muted-foreground border-t pt-4">Existing admin login</p>
+            </div>}
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
                 <Label htmlFor="username">Username</Label>
@@ -120,9 +131,9 @@ export default function LoginPage() {
                 {loading ? "Signing in…" : "Sign In"}
               </Button>
             </form>
-            {loginOptions?.farmEmailLoginEnabled
+            {!loginOptions?.oidcLoginEnabled && (loginOptions?.farmEmailLoginEnabled
               ? <EmailLogin key={`farm-${!!loginOptions.farmMagicLinkEnabled}`} provider="farm" magicLinkEnabled={!!loginOptions.farmMagicLinkEnabled} />
-              : loginOptions?.emailLoginEnabled && <EmailLogin />}
+              : loginOptions?.emailLoginEnabled && <EmailLogin />)}
           </div>
         </div>
         <BottomNav />

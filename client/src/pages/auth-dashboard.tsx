@@ -14,6 +14,7 @@ type Dashboard = {
     senderConfigured: boolean; domainVerified: boolean; reason: string;
   };
   farm?: { enabled: boolean; configured: boolean; emailLoginEnabled: boolean; magicLinkEnabled: boolean; reason: string };
+  oidc?: { enabled: boolean; configured: boolean; reason: string };
   counts: { users: number; activeSessions: number };
   users: { id: string; name: string; email: string; emailVerified: boolean; createdAt: string }[];
   sessions: { id: string; userId: string; createdAt: string; expiresAt: string }[];
@@ -53,8 +54,19 @@ export default function AuthDashboard() {
           <Card className="p-4">Could not load auth status. Please refresh.</Card>
         ) : data && (
           <>
+            {data.oidc && <Card className="p-4 space-y-3" data-testid="oidc-auth-status">
+              <h2 className="font-semibold text-sm">Farm OAuth / OpenID Connect</h2>
+              <p className="text-sm">{data.oidc.reason}</p>
+              {[["OIDC configuration", data.oidc.configured], ["Secure login enabled", data.oidc.enabled]].map(([label, ready]) => (
+                <div className="flex justify-between gap-3 text-xs" key={String(label)}>
+                  <span>{label}</span><span className={ready ? "text-green-700" : "text-muted-foreground"}>{ready ? "Ready" : "Not enabled"}</span>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">Login and Resend email delivery happen on the farm. Nakedapp checks the result and keeps only its own short app session, not farm session or refresh tokens. These flags are configuration status, not a live email-delivery check.</p>
+              <a href="https://dash.better-auth.com" target="_blank" rel="noopener noreferrer"><Button variant="outline" size="sm">Open Better Auth dashboard<ExternalLink className="w-4 h-4 ml-2" /></Button></a>
+            </Card>}
             {data.farm && <Card className="p-4 space-y-3" data-testid="farm-auth-status">
-              <h2 className="font-semibold text-sm">Dedicated farm connector</h2>
+              <h2 className="font-semibold text-sm">Legacy farm bearer relay</h2>
               <p className="text-sm">{data.farm.reason}</p>
               {[
                 ["Connector configuration", data.farm.configured],
@@ -64,7 +76,7 @@ export default function AuthDashboard() {
               ].map(([label, ready]) => <div className="flex justify-between gap-3 text-xs" key={String(label)}>
                 <span>{label}</span><span className={ready ? "text-green-700" : "text-muted-foreground"}>{ready ? "Ready" : "Not enabled"}</span>
               </div>)}
-              <p className="text-xs text-muted-foreground">These flags describe Nakedapp configuration, not live farm health or email delivery. Farm users stay in the farm database. Bearer tokens stay encrypted server-side.</p>
+              <p className="text-xs text-muted-foreground">The earlier relay is disabled when OIDC is selected. When used, it stores encrypted farm bearer tokens server-side; the new OIDC flow does not. Farm users stay in the farm database.</p>
               <a href="https://dash.better-auth.com" target="_blank" rel="noopener noreferrer"><Button variant="outline" size="sm">Open Better Auth dashboard<ExternalLink className="w-4 h-4 ml-2" /></Button></a>
             </Card>}
             <Card className="p-4 space-y-3">
@@ -105,7 +117,7 @@ export default function AuthDashboard() {
         )}
         <Card className="p-4 space-y-3">
           <h2 className="font-semibold text-sm">Resend email delivery</h2>
-          <p className="text-xs text-muted-foreground">Resend hosts its own dashboard. Verify the sender domain there before enabling public magic links and codes.</p>
+          <p className="text-xs text-muted-foreground">Resend hosts its own dashboard. For farm OIDC, keep its API key and sender configuration on the farm. Verify the sender domain before enabling public magic links and codes.</p>
           <a href="https://resend.com/emails" target="_blank" rel="noopener noreferrer"><Button variant="outline" size="sm">Open Resend dashboard<ExternalLink className="w-4 h-4 ml-2" /></Button></a>
         </Card>
       </div>
