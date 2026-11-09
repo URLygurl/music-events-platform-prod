@@ -1299,6 +1299,7 @@ export default function AdminPage() {
               <ShieldCheck className="w-4 h-4 mr-2" /> Authentication / Resend
             </Button>
           </Link>
+          <Link href="/admin/login-screen"><Button variant="outline" size="sm" className="mb-4 ml-2" data-testid="button-login-screen">Login screen</Button></Link>
 
           {currentSection.id === "artists" ? (
             <div className="space-y-4">

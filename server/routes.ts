@@ -6,6 +6,7 @@ import { storage } from "./storage";
 import { insertEnquirySchema, insertArtistSchema, insertEventSchema, insertMediaItemSchema, insertDonationSchema, insertDsClientSchema, insertProductSchema } from "@shared/schema";
 import { getAuthDashboard } from "./better-auth";
 import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isSuperAdmin, logActivity, getSessionUser } from "./auth";
+import { registerLoginDesignRoutes, LOGIN_DESIGN_KEYS } from "./login-design";
 import { initializeProfileStorage, registerProfileRoutes } from "./profile";
 import { db } from "./db";
 import { activityLog } from "@shared/models/auth";
@@ -107,6 +108,7 @@ export async function registerRoutes(
 ): Promise<Server> {
   await setupAuth(app);
   registerAuthRoutes(app);
+  registerLoginDesignRoutes(app, isAdmin);
   await initializeProfileStorage();
   registerProfileRoutes(app);
 
@@ -396,7 +398,7 @@ export async function registerRoutes(
   app.get("/api/settings", async (_req, res) => {
     try {
       const settings = await storage.getAllSettings();
-      res.json(settings);
+      res.json(settings.filter(s => !LOGIN_DESIGN_KEYS.includes(s.key)));
     } catch (error) {
       console.error("Error fetching settings:", error);
       res.status(500).json({ message: "Failed to fetch settings" });
@@ -407,9 +409,10 @@ export async function registerRoutes(
     try {
       const { settings } = req.body;
       if (!Array.isArray(settings)) return res.status(400).json({ message: "settings must be an array" });
+      if (settings.some(s => LOGIN_DESIGN_KEYS.includes(s?.key))) return res.status(400).json({ message: "Use the Login screen editor" });
       await storage.upsertManySettings(settings);
       const all = await storage.getAllSettings();
-      res.json(all);
+      res.json(all.filter(s => !LOGIN_DESIGN_KEYS.includes(s.key)));
     } catch (error) {
       console.error("Error saving settings:", error);
       res.status(500).json({ message: "Failed to save settings" });
