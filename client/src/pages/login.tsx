@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,15 @@ export default function LoginPage() {
   }>({
     queryKey: ["/api/login-options"], staleTime: 0,
   });
+
+  useEffect(() => {
+    if (loginOptions?.oidcLoginEnabled && new URLSearchParams(window.location.search).get("continue") === "1") {
+      // Fresh same-origin state/nonce/PKCE; never trust a redirect or token in the URL.
+      // The verified farm session is reused without a second password/code.
+      window.history.replaceState(null, "", "/login");
+      window.location.replace("/api/auth/oidc/start");
+    }
+  }, [loginOptions?.oidcLoginEnabled]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -92,7 +101,7 @@ export default function LoginPage() {
               <Button asChild className="w-full">
                 <a href="/api/auth/oidc/start"><LogIn className="w-4 h-4 mr-2" />Sign in / Create account</a>
               </Button>
-              <p className="text-xs text-muted-foreground text-center">Continue to our secure login page for email links and one-time codes.</p>
+              <p className="text-xs text-muted-foreground text-center">Continue to our secure login page for social sign-in or email and password.</p>
               <p className="text-xs text-muted-foreground border-t pt-4">Existing admin login</p>
             </div>}
             <form onSubmit={handleLogin} className="space-y-4">
