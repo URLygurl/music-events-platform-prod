@@ -1294,12 +1294,16 @@ export default function AdminPage() {
             Edit the fields below. Changes are saved per section.
           </p>
 
-          <Link href="/admin/authentication">
-            <Button variant="outline" size="sm" className="mb-4" data-testid="button-auth-dashboard">
-              <ShieldCheck className="w-4 h-4 mr-2" /> Authentication / Resend
-            </Button>
-          </Link>
-          <Link href="/admin/login-screen"><Button variant="outline" size="sm" className="mb-4 ml-2" data-testid="button-login-screen">Login screen</Button></Link>
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <Link href="/admin/authentication" className="flex">
+              <Button variant="outline" size="sm" data-testid="button-auth-dashboard">
+                <ShieldCheck className="w-4 h-4 mr-2" /> Authentication / Resend
+              </Button>
+            </Link>
+            <Link href="/admin/login-screen" className="flex">
+              <Button variant="outline" size="sm" data-testid="button-login-screen">Login screen</Button>
+            </Link>
+          </div>
 
           {currentSection.id === "artists" ? (
             <div className="space-y-4">
