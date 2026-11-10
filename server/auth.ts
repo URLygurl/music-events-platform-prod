@@ -26,6 +26,7 @@ import { eq, sql } from "drizzle-orm";
 import { getBetterAuthUser, signOutBetterAuth } from "./better-auth";
 import { getFarmAuthUser, mountFarmAuth, signOutFarmAuth } from "./farm-auth";
 import { getOidcAuthUser, mountOidcAuth, signOutOidcAuth } from "./oidc-auth";
+import { resolveOidcAccount } from "./oidc-account-links";
 
 // ─── Session setup ────────────────────────────────────────────────────────────
 
@@ -193,7 +194,14 @@ export async function getSessionUser(req: any) {
       return safeUser;
     }
   }
-  if (req.session?.oidcAuth) return getOidcAuthUser(req);
+  if (req.session?.oidcAuth) {
+    const identity = await getOidcAuthUser(req);
+    if (!identity) return null;
+    return resolveOidcAccount(identity, req.session.oidcAuth.issuer, process.env, async id => {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user || null;
+    });
+  }
   if (process.env.OIDC_ENABLED === "true") return null;
   if (req.session?.farmAuth) return getFarmAuthUser(req);
   return getBetterAuthUser(req);

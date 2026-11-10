@@ -29,10 +29,12 @@ export default function LoginPage() {
 
   const { data: loginOptions } = useQuery<{
     emailLoginEnabled: boolean; farmEmailLoginEnabled?: boolean; farmMagicLinkEnabled?: boolean;
-    oidcLoginEnabled?: boolean;
+    oidcLoginEnabled?: boolean; legacyLoginHidden?: boolean;
   }>({
     queryKey: ["/api/login-options"], staleTime: 0,
   });
+  const recoveryLogin = new URLSearchParams(window.location.search).get("legacy") === "1";
+  const showLegacy = recoveryLogin || !!loginOptions && !loginOptions.legacyLoginHidden;
 
   useEffect(() => {
     if (loginOptions?.oidcLoginEnabled && new URLSearchParams(window.location.search).get("continue") === "1") {
@@ -102,9 +104,10 @@ export default function LoginPage() {
                 <a href="/api/auth/oidc/start"><LogIn className="w-4 h-4 mr-2" />Sign in / Create account</a>
               </Button>
               <p className="text-xs text-muted-foreground text-center">Continue to our secure login page for social sign-in or email and password.</p>
-              <p className="text-xs text-muted-foreground border-t pt-4">Existing admin login</p>
+              {showLegacy && <p className="text-xs text-muted-foreground border-t pt-4">Existing admin login</p>}
             </div>}
-            <form onSubmit={handleLogin} className="space-y-4">
+            {!showLegacy && error && <p className="text-sm text-destructive text-center">{error}</p>}
+            {showLegacy && <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1">
                 <Label htmlFor="username">Username</Label>
                 <Input
@@ -139,7 +142,7 @@ export default function LoginPage() {
                 <LogIn className="w-4 h-4 mr-2" />
                 {loading ? "Signing in…" : "Sign In"}
               </Button>
-            </form>
+            </form>}
             {!loginOptions?.oidcLoginEnabled && (loginOptions?.farmEmailLoginEnabled
               ? <EmailLogin key={`farm-${!!loginOptions.farmMagicLinkEnabled}`} provider="farm" magicLinkEnabled={!!loginOptions.farmMagicLinkEnabled} />
               : loginOptions?.emailLoginEnabled && <EmailLogin />)}
