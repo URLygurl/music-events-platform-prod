@@ -66,7 +66,7 @@ export function mountBetterAuth(app: Express) {
       farmEmailLoginEnabled: !oidcSelected && farm.emailLoginEnabled,
       farmMagicLinkEnabled: !oidcSelected && farm.magicLinkEnabled,
       oidcLoginEnabled: oidc.enabled,
-      legacyLoginHidden: oidc.enabled && process.env.LEGACY_LOGIN_HIDDEN === "true",
+      legacyLoginHidden: oidc.enabled && process.env.LEGACY_LOGIN_HIDDEN !== "false",
     });
   });
   app.all("/api/better-auth/{*path}", async (req, res, next) => {

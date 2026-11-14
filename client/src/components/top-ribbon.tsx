@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSettings } from "@/hooks/use-settings";
 import { useQuery } from "@tanstack/react-query";
 import { ImagePlaceholder } from "@/components/image-placeholder";
+import { LegacyAdminLink } from "@/components/legacy-admin-link";
 
 const PUBLIC_MENU_ITEMS = [
   { key: "home", href: "/", settingKey: "menu_show_home", labelKey: "nav_home_label", defaultLabel: "Home" },
@@ -88,7 +89,7 @@ export function TopRibbon() {
   return (
     <div style={{ height: logoHeight + titleHeight + 1 }} data-testid="header-spacer">
     <header className="fixed top-0 left-0 right-0 z-50 w-full shadow-md" data-testid="header-banner" data-compact={compact}>
-      <div ref={titleRef} className="w-full border-b bg-background/90 backdrop-blur-md px-4 py-2">
+      <div ref={titleRef} className="relative w-full min-h-11 border-b bg-background/90 backdrop-blur-md px-14 py-3">
         <p
           className="text-center tracking-widest uppercase text-muted-foreground"
           style={{
@@ -100,6 +101,7 @@ export function TopRibbon() {
         >
           {companyName}
         </p>
+        <LegacyAdminLink />
       </div>
 
       <div className="w-full border-b bg-background/90 backdrop-blur-md">

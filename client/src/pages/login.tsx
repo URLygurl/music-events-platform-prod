@@ -8,6 +8,7 @@ import { LogIn } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmailLogin } from "@/components/email-login";
+import { LegacyAdminLink } from "@/components/legacy-admin-link";
 
 export default function LoginPage() {
   const { get } = useSettings();
@@ -81,10 +82,11 @@ export default function LoginPage() {
     >
       {bgImage && <div className="fixed inset-0 bg-background/80 z-0" />}
       <div className={`flex flex-col min-h-screen ${bgImage ? "relative z-10" : ""}`}>
-        <div className="w-full border-b px-4 py-2">
+        <div className="relative w-full min-h-11 border-b px-14 py-3">
           <p className="text-center text-xs tracking-widest uppercase text-muted-foreground">
             {companyName}
           </p>
+          <LegacyAdminLink />
         </div>
         <div className="w-full border-b">
           {headerImage ? (
@@ -96,10 +98,10 @@ export default function LoginPage() {
         <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20 max-w-sm mx-auto w-full">
           <div className="w-full space-y-8">
             <div className="text-center space-y-2">
-              <h1 className="text-2xl font-semibold tracking-tight">{welcomeText}</h1>
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
+              <h1 className="text-2xl font-semibold tracking-tight">{recoveryLogin ? "Admin sign in" : welcomeText}</h1>
+              <p className="text-sm text-muted-foreground">{recoveryLogin ? "Use your existing admin username and password." : subtitle}</p>
             </div>
-            {loginOptions?.oidcLoginEnabled && <div className="space-y-3" data-testid="oidc-login">
+            {!recoveryLogin && loginOptions?.oidcLoginEnabled && <div className="space-y-3" data-testid="oidc-login">
               <Button asChild className="w-full">
                 <a href="/api/auth/oidc/start"><LogIn className="w-4 h-4 mr-2" />Sign in / Create account</a>
               </Button>
@@ -143,7 +145,7 @@ export default function LoginPage() {
                 {loading ? "Signing in…" : "Sign In"}
               </Button>
             </form>}
-            {!loginOptions?.oidcLoginEnabled && (loginOptions?.farmEmailLoginEnabled
+            {!recoveryLogin && !loginOptions?.oidcLoginEnabled && (loginOptions?.farmEmailLoginEnabled
               ? <EmailLogin key={`farm-${!!loginOptions.farmMagicLinkEnabled}`} provider="farm" magicLinkEnabled={!!loginOptions.farmMagicLinkEnabled} />
               : loginOptions?.emailLoginEnabled && <EmailLogin />)}
           </div>
