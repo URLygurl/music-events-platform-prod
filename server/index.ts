@@ -2,8 +2,11 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import * as net from "net";
 import { initializeBetterAuth, mountBetterAuth } from "./better-auth";
 
+// Farm OIDC is in NZ (~270-340ms from Railway); Node's 250ms per-address connect limit made every attempt ETIMEDOUT.
+if (typeof net.setDefaultAutoSelectFamilyAttemptTimeout === "function") net.setDefaultAutoSelectFamilyAttemptTimeout(2000);
 const app = express();
 const httpServer = createServer(app);
 app.set("trust proxy", 1);
