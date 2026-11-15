@@ -1,6 +1,6 @@
-export const LOGIN_FONTS = { sans: 'Arial, Helvetica, sans-serif', serif: 'Georgia, "Times New Roman", serif', mono: '"Courier New", monospace', rounded: '"Trebuchet MS", Arial, sans-serif' } as const;
+export const LOGIN_FONTS = { sans: 'Arial, Helvetica, sans-serif', inter: 'Inter, Arial, sans-serif', oxanium: 'Oxanium, Arial, sans-serif', serif: 'Georgia, "Times New Roman", serif', mono: '"Courier New", monospace', rounded: '"Trebuchet MS", Arial, sans-serif' } as const;
 export type LoginFont = keyof typeof LOGIN_FONTS;
-export type LoginPanel = { font: LoginFont; headingSize: number; bodySize: number; background: string; textColor: string; imageUrl: string };
+export type LoginPanel = { font: LoginFont; headingSize: number; bodySize: number; background: string; textColor: string; imageUrl: string; imageOpacity: number };
 export type LoginDesign = {
   version: 1;
   left: LoginPanel & { brand: string; logoUrl: string; eyebrow: string; headline: string; description: string; footer: string; accent: string };
@@ -8,8 +8,8 @@ export type LoginDesign = {
 };
 export const DEFAULT_LOGIN_DESIGN: LoginDesign = {
   version: 1,
-  left: { font: 'sans', headingSize: 56, bodySize: 17, background: '#20263b', textColor: '#ffffff', imageUrl: '', brand: 'nakedapp', logoUrl: '', eyebrow: 'FOR THE PEOPLE WHO MAKE THE MUSIC.', headline: 'Find your people.\nFeel the music.', description: 'Artists, musicians, venues and the people who bring it all together.', footer: 'YOUR IDENTITY. YOUR CHOICE.', accent: '#d3fa77' },
-  right: { font: 'sans', headingSize: 34, bodySize: 15, background: '#f5f4ef', textColor: '#171b29', imageUrl: '', eyebrow: 'NAKEDAPP · SIGN IN', loginTitle: 'Welcome back.', signupTitle: 'Create your account.', loginIntro: 'Your music. Your people. One account.', signupIntro: 'Join the artists, musicians and people who make it happen.', footer: 'Your account. Your music.', loginButton: 'Sign in', signupButton: 'Create account', googleLabel: 'Continue with Google', buttonColor: '#222940', buttonTextColor: '#ffffff' },
+  left: { font: 'sans', headingSize: 56, bodySize: 17, background: '#20263b', textColor: '#ffffff', imageUrl: '', imageOpacity: 100, brand: 'nakedapp', logoUrl: '', eyebrow: 'FOR THE PEOPLE WHO MAKE THE MUSIC.', headline: 'Find your people.\nFeel the music.', description: 'Artists, musicians, venues and the people who bring it all together.', footer: 'YOUR IDENTITY. YOUR CHOICE.', accent: '#d3fa77' },
+  right: { font: 'sans', headingSize: 34, bodySize: 15, background: '#f5f4ef', textColor: '#171b29', imageUrl: '', imageOpacity: 100, eyebrow: 'NAKEDAPP · SIGN IN', loginTitle: 'Welcome back.', signupTitle: 'Create your account.', loginIntro: 'Your music. Your people. One account.', signupIntro: 'Join the artists, musicians and people who make it happen.', footer: 'Your account. Your music.', loginButton: 'Sign in', signupButton: 'Create account', googleLabel: 'Continue with Google', buttonColor: '#222940', buttonTextColor: '#ffffff' },
 };
 export function copyDefaultLoginDesign(): LoginDesign { return JSON.parse(JSON.stringify(DEFAULT_LOGIN_DESIGN)); }
 export function parseLoginDesign(input: unknown, imageOrigin = 'https://nakedapp.up.railway.app'): LoginDesign {
@@ -19,11 +19,13 @@ export function parseLoginDesign(input: unknown, imageOrigin = 'https://nakedapp
   const result = copyDefaultLoginDesign();
   for (const side of ['left', 'right'] as const) {
     const source = object(root[side]); const target = result[side] as unknown as Record<string, unknown>;
+    if (!Object.hasOwn(source, 'imageOpacity')) source.imageOpacity = 100;
     if (Object.keys(source).length !== Object.keys(target).length || Object.keys(source).some(k => !(k in target))) fail();
     for (const key of Object.keys(target)) {
       const value = source[key];
       if (key === 'font') { if (typeof value !== 'string' || !Object.prototype.hasOwnProperty.call(LOGIN_FONTS, value)) fail(); }
       else if (key === 'headingSize' || key === 'bodySize') { if (typeof value !== 'number' || !Number.isInteger(value) || value < (key === 'headingSize' ? 24 : 12) || value > (key === 'headingSize' ? 64 : 22)) fail(); }
+      else if (key === 'imageOpacity') { if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 100) fail(); }
       else if (['background','textColor','accent','buttonColor','buttonTextColor'].includes(key)) { if (typeof value !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(value)) fail(); }
       else if (key === 'imageUrl' || key === 'logoUrl') {
         if (typeof value !== 'string' || value.length > 250) fail();
