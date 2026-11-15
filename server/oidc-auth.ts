@@ -178,7 +178,7 @@ export function createOidcAuthBridge(env: Environment, fetchImpl: Fetch = global
           headers: { "Content-Type": response.headers.get("content-type") || "application/octet-stream" },
         });
       })()]);
-    } catch { unavailable = true; throw new Error("Provider unavailable"); }
+    } catch (err) { console.error("[oidc] provider fetch failed", url, (err as any)?.cause?.code ?? (err as any)?.cause?.message ?? (err as any)?.message); unavailable = true; throw new Error("Provider unavailable"); }
     finally {
       if (timer) clearTimeout(timer);
       controller.abort();
