@@ -115,9 +115,6 @@ export function createOidcAuthBridge(env: Environment, fetchImpl: Fetch = global
   const consumed = new Map<string, number>();
   const activeSessions = new Set<string>();
   const cancelledSessions = new Set<string>();
-  // A short-lived handoff survives provider email verification when the
-  // browser does not return the original app session cookie.
-  const pendingFlows = new Map<string, { flow: OidcFlow; sessionId: string }>();
   let configuration: oidc.Configuration | undefined;
   let initializing: Promise<oidc.Configuration> | undefined;
   let retryAt = 0;
@@ -278,7 +275,6 @@ export function createOidcAuthBridge(env: Environment, fetchImpl: Fetch = global
     const now = Date.now();
     for (const [key, bucket] of Array.from(buckets.entries())) if (bucket.until <= now) buckets.delete(key);
     for (const [state, until] of Array.from(consumed.entries())) if (until <= now) consumed.delete(state);
-    for (const [state, pending] of Array.from(pendingFlows.entries())) if (pending.flow.expiresAt <= now) pendingFlows.delete(state);
     // Uses the application's explicit trust-proxy policy. Ingress must sanitize
     // forwarded IP headers; none of them are ever forwarded to the farm.
     const key = `${start ? "start" : "callback"}:${req.ip || req.socket.remoteAddress || "unknown"}`;
@@ -347,8 +343,6 @@ export function createOidcAuthBridge(env: Environment, fetchImpl: Fetch = global
           req.session.oidcFlow = { issuer, state, nonce, verifier, expiresAt: Date.now() + FLOW_TTL };
           req.session.cookie.maxAge = FLOW_TTL;
           await save(req);
-          if (pendingFlows.size >= 2048) return failure(res, 429);
-          pendingFlows.set(state, { flow: req.session.oidcFlow, sessionId: req.sessionID });
           const authorization = oidc.buildAuthorizationUrl(config, {
             response_type: "code", response_mode: "query", scope: "openid email profile",
             redirect_uri: callback, code_challenge_method: "S256", code_challenge: challenge, state, nonce,
@@ -356,24 +350,17 @@ export function createOidcAuthBridge(env: Environment, fetchImpl: Fetch = global
           return res.redirect(302, authorization.href);
         }
         // Reload before claiming; never rely on a stale Express session snapshot.
-        // A recovered handoff may arrive with a brand-new session ID, which has
-        // no record to reload yet.
-        const callbackState = query.get("state");
-        const pending = callbackState ? pendingFlows.get(callbackState) : undefined;
-        const recoveredHandoff = !!pending && pending.sessionId !== req.sessionID;
-        if (!recoveredHandoff) await reload(req);
+        await reload(req);
         if (conflict(req)) return failure(res, 409);
-        const flow = req.session.oidcFlow || pending?.flow;
+        const flow = req.session.oidcFlow;
         if (!flow || flow.issuer !== issuer || !text(flow.state) || !text(flow.nonce) || !text(flow.verifier) || !Number.isFinite(flow.expiresAt) || flow.expiresAt <= Date.now() || flow.expiresAt > Date.now() + FLOW_TTL) {
           delete req.session.oidcFlow;
-          if (pending) pendingFlows.delete(callbackState!);
           await save(req);
           return failure(res, 401);
         }
-        if (callbackState !== flow.state || consumed.has(flow.state)) return failure(res, 401);
+        if (query.get("state") !== flow.state || consumed.has(flow.state)) return failure(res, 401);
         if (consumed.size >= 2048) return failure(res, 429);
         consumed.set(flow.state, flow.expiresAt);
-        pendingFlows.delete(flow.state);
         delete req.session.oidcFlow;
         await save(req); // Single-use even on OP errors, timeouts, and failed validation.
         if (query.has("iss") && query.get("iss") !== issuer || query.has("error") || !query.has("code") || query.has("error_description") || query.has("error_uri")) return failure(res, 401);
@@ -400,7 +387,7 @@ export function createOidcAuthBridge(env: Environment, fetchImpl: Fetch = global
           firstName: optionalName(profile.given_name) || optionalName(profile.name), lastName: optionalName(profile.family_name),
           profileImageUrl: safeImage(profile.picture), role: "user",
         };
-        if (!recoveredHandoff) await reload(req);
+        await reload(req);
         if (conflict(req)) return failure(res, 409);
         if (cancelledSessions.has(sessionId)) return failure(res, 401);
         const expiresAt = Math.min(claims.exp * 1000, Date.now() + USER_TTL);
