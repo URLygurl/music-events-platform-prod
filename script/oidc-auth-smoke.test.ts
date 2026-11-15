@@ -275,6 +275,17 @@ test("local session expiry is capped at validated ID token expiry", async () => 
   }, {}, { claims: { exp } });
 });
 
+test("email verification callback can complete when the browser loses the app session cookie", async () => {
+  await withFixture(async (f) => {
+    await f.start();
+    f.setCookie("connect.sid=browser-handoff-lost");
+    const response = await f.request(f.callbackPath());
+    assert.equal(response.status, 302, response.text);
+    assert.equal(response.headers.get("location"), `${origin}/profile`);
+    assert.equal((await f.request("/test/user")).json().id, "farm-auth:public-farm-subject");
+  });
+});
+
 test("legacy and farm identities are preserved with 409 at start/callback; no email linking", async () => {
   for (const identity of ["legacy", "farm"]) {
     await withFixture(async (f) => {
