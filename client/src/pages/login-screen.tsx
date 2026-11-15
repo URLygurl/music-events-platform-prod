@@ -56,7 +56,7 @@ export default function LoginScreenEditor() {
   if (error) return <div className="p-6">Cannot load the design. <button onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/admin/login-design'] })}>Retry</button></div>;
   if (!design || loadingDesign) return <div className="p-6">Loading design…</div>;
   const left = design.left, right = design.right;
-  const panelStyle = (panel: typeof left | typeof right): CSSProperties => ({ fontFamily: LOGIN_FONTS[panel.font], backgroundColor: panel.background, color: panel.textColor, backgroundImage: panel.imageUrl ? `url("${panel.imageUrl}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center', backgroundBlendMode: 'normal', opacity: 1, fontSize: panel.bodySize });
+  const panelStyle = (panel: typeof left | typeof right): CSSProperties => ({ fontFamily: LOGIN_FONTS[panel.font], backgroundColor: panel.background, color: panel.textColor, backgroundImage: panel.imageUrl ? `linear-gradient(${panel.background}${Math.round((100 - panel.imageOpacity) * 2.55).toString(16).padStart(2, '0')}, ${panel.background}${Math.round((100 - panel.imageOpacity) * 2.55).toString(16).padStart(2, '0')}), url("${panel.imageUrl}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center', backgroundBlendMode: 'normal', opacity: 1, fontSize: panel.bodySize });
   const dirty = JSON.stringify(design) !== JSON.stringify(data?.draft);
   return <main className="mx-auto max-w-7xl p-4 md:p-6 pb-28" data-testid="login-screen-editor">
     <Link href="/admin"><Button variant="outline" size="sm">Back to Admin</Button></Link>
